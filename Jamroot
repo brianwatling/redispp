@@ -1,0 +1,15 @@
+project Jamroot
+    : usage-requirements <include>./src
+    ;
+
+use-project /redispp : src ;
+use-project /test-redis : test ;
+
+build-project /redispp ;
+build-project /test-redis ;
+
+#alias install : install-lib install-headers ;
+#install install-lib : /fiber : <location>/usr/lib ;
+#install install-headers : [ glob src/*.h ] : <location>/usr/include/fiber ;
+
+#explicit install install-lib install-headers ;

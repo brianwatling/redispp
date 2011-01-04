@@ -1,0 +1,5 @@
+project redispp
+    : usage-requirements <include>.
+    ;
+
+lib redispp : redispp.cpp ;

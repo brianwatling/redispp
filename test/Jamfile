@@ -1,0 +1,8 @@
+project redispptest
+    ;
+
+using testing ;
+
+run test.cpp /redispp ;
+
+run perf.cpp /redispp ;
