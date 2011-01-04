@@ -8,8 +8,8 @@ use-project /test-redis : test ;
 build-project /redispp ;
 build-project /test-redis ;
 
-#alias install : install-lib install-headers ;
-#install install-lib : /fiber : <location>/usr/lib ;
-#install install-headers : [ glob src/*.h ] : <location>/usr/include/fiber ;
+alias install : install-lib install-headers ;
+install install-lib : /redispp : <location>/usr/local/lib ;
+install install-headers : [ glob src/*.h ] : <location>/usr/local/include ;
 
-#explicit install install-lib install-headers ;
+explicit install install-lib install-headers ;
