@@ -1,7 +1,7 @@
 # Another C++ client for Redis
 
 - Supports pipelining, using the same functions as synchronous requests
-- The included performance test runs about 5 times faster with pipelining than with synchronous requests (on my laptop, to localhost)
+- The included performance test runs about 5 times faster with pipelining than with synchronous requests (single client/thread, on my laptop, to localhost)
 - Depends on boost library
 - g++, Linux, Mac (OS X 10.6.5)
 
@@ -39,6 +39,14 @@ Start loading a value, then use it later:
 These are resolved immediately:
     int hlen = conn.hlen("computer");
     std::string value = conn.get("world");
+
+## Building
+
+- You should be able to build libredispp.a and libredispp.so by typing 'make'
+- Bjam users can type 'bjam'
+- **WARNING** The unit tests will not pass unless you change TEST_PORT in test/test.cpp. The *entire* redis database will be cleared
+- You should run the unit and performance tests with a temporary database, with no production data
+- The performance test will not run unless you start it with a port (ie ./perf 6379)
 
 ## License
 

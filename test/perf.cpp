@@ -6,9 +6,9 @@
 
 using namespace redispp;
 
-void runFunc(size_t count)
+void runFunc(const char* port, size_t count)
 {
-    Connection conn("127.0.0.1", "6379", "password", false);
+    Connection conn("127.0.0.1", port, "password", false);
 
     std::string key = "somemediumkey2";
     std::string value = "somemediumvalue";
@@ -42,7 +42,12 @@ void runFunc(size_t count)
 
 int main(int argc, char* argv[])
 {
-    int count = argc > 1 ? atoi(argv[1]) : 100000;
-    runFunc(count);
+    if(argc <= 1)
+    {
+        std::cout << "usage: ./perf <port> [count]" << std::endl;
+        return 1;
+    }
+    int count = argc > 2 ? atoi(argv[2]) : 100000;
+    runFunc(argv[1], count);
     return 1;
 }
