@@ -89,7 +89,6 @@ public:
 
     VoidReply& operator=(const VoidReply& other)
     {
-        result();
         conn = other.conn;
         other.conn = NULL;
         storedResult = other.storedResult;
@@ -128,7 +127,6 @@ public:
 
     BoolReply& operator=(const BoolReply& other)
     {
-        result();
         conn = other.conn;
         other.conn = NULL;
         storedResult = other.storedResult;
@@ -167,7 +165,6 @@ public:
 
     IntReply& operator=(const IntReply& other)
     {
-        result();
         conn = other.conn;
         other.conn = NULL;
         storedResult = other.storedResult;
@@ -206,7 +203,6 @@ public:
 
     StringReply& operator=(const StringReply& other)
     {
-        result();
         conn = other.conn;
         other.conn = NULL;
         storedResult = other.storedResult;
