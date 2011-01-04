@@ -3,7 +3,8 @@
 - Supports pipelining, using the same functions as synchronous requests
 - The included performance test runs about 5 times faster with pipelining than with synchronous requests (single client/thread, on my laptop, to localhost)
 - Depends on boost library
-- g++, Linux, Mac (OS X 10.6.5)
+- g++, tested on Linux, Mac (OS X 10.6.5)
+- Written against Redis 2.0.4
 
 ## Simple example
 
