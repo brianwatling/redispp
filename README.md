@@ -1,6 +1,7 @@
 # Another C++ client for Redis
 
 - Supports pipelining, using the same functions as synchronous requests
+- The included performance test runs about 5 times faster with pipelining than with synchronous requests (on my laptop, to localhost)
 - Depends on boost library
 - g++, Linux, Mac (OS X 10.6.5)
 
@@ -18,11 +19,13 @@ conn.set("hello", "world");
 
 redispp::Connection conn("127.0.0.1", "6379", "password", false);
 //up to 64 requests 'on the wire'
-VoidReply replies[64];
-
-for(size_t i = 0; i < count; ++i)
 {
-    replies[i & 63] = conn.set(keys[i], values[i]);
+    VoidReply replies[64];
+
+    for(size_t i = 0; i < count; ++i)
+    {
+        replies[i & 63] = conn.set(keys[i], values[i]);
+    }
 }
 
 //save an object using pipelining
