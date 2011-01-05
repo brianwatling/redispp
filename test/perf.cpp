@@ -36,7 +36,7 @@ void runFunc(const char* port, size_t count)
 
     ptime end(microsec_clock::local_time());
 
-    std::cout << count << " writes in " << (end - begin).total_microseconds() << " usecs ~= " << (double)count * 1000000.0/(double)(end - begin).total_microseconds() << std::endl;
+    std::cout << count << " writes in " << (end - begin).total_microseconds() << " usecs ~= " << (double)count * 1000000.0/(double)(end - begin).total_microseconds() << " requests per second" << std::endl;
 
     for(size_t i = 0; i < chunkFactor; ++i)
     {

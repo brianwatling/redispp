@@ -7,6 +7,38 @@
 - Includes makefile, bjam jamfiles, and VC++ project
 - Written against Redis 2.0.4
 
+## Performance
+
+This client's pipelining allows it to really push the redis server, even with one client. I ran the included performance benchmark on my Ubuntu 9.10 64-bit virtual machine. The physical machine is quad-core @ 3Ghz with 8GB RAM @ 800Mhz. At 256 requests 'on-the-wire', I reached approximately 230k writes per second with one connection (a write is: conn.set("somemediumkey2", "somemediumvalue")). I was able to reach nearly 260k writes per second with 4096 requests 'on-the-wire'. Below is test/perf.cpp's output for various amounts of outstanding requests.
+
+256 requests on the wire:
+    bwatling@ubuntu:~/Desktop/redispp$ for cur in `seq 1 10`; do ./test/bin/perf.test/gcc-4.4.1/release/perf 6379 1000000; done
+    1000000 writes in 4451367 usecs ~= 224650 requests per second
+    1000000 writes in 4301082 usecs ~= 232500 requests per second
+    1000000 writes in 4294144 usecs ~= 232875 requests per second
+    1000000 writes in 4255403 usecs ~= 234995 requests per second
+    1000000 writes in 4272437 usecs ~= 234058 requests per second
+    1000000 writes in 4273374 usecs ~= 234007 requests per second
+    1000000 writes in 4251377 usecs ~= 235218 requests per second
+    1000000 writes in 4288723 usecs ~= 233170 requests per second
+    1000000 writes in 4247717 usecs ~= 235421 requests per second
+    1000000 writes in 4257261 usecs ~= 234893 requests per second
+
+4096 requests on the wire:
+    bwatling@ubuntu:~/Desktop/redispp$ for cur in `seq 1 10`; do ./test/bin/perf.test/gcc-4.4.1/release/perf 6379 1000000; done
+    1000000 writes in 4035970 usecs ~= 247772 requests per second
+    1000000 writes in 3855737 usecs ~= 259354 requests per second
+    1000000 writes in 3876598 usecs ~= 257958 requests per second
+    1000000 writes in 3867489 usecs ~= 258566 requests per second
+    1000000 writes in 3887749 usecs ~= 257218 requests per second
+    1000000 writes in 3826811 usecs ~= 261314 requests per second
+    1000000 writes in 3864827 usecs ~= 258744 requests per second
+    1000000 writes in 3893552 usecs ~= 256835 requests per second
+    1000000 writes in 3881562 usecs ~= 257628 requests per second
+    1000000 writes in 3869083 usecs ~= 258459 requests per second
+
+In comparison, with a single client and no pipelining this machine could handle approximately 50k writes per second (using redispp and the same for credis).
+
 ## Simple example
 
     redispp::Connection conn("127.0.0.1", "6379", "password", false);
