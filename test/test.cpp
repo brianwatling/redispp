@@ -291,3 +291,22 @@ BOOST_AUTO_TEST_CASE(misc)
 
 //TODO: test for pipelined requests
 
+BOOST_AUTO_TEST_CASE(pipelined)
+{
+    Connection conn("127.0.0.1", TEST_PORT, "password");
+
+    {
+        VoidReply a = conn.set("one", "a");
+        StringReply readA = conn.get("one");
+        {
+            BoolReply b = conn.hset("two", "two", "b");
+            VoidReply c = conn.set("three", "c");
+        }
+        BOOST_CHECK(readA.result() == "a");
+    }
+
+    BOOST_CHECK((std::string)conn.get("one") == "a");
+    BOOST_CHECK((std::string)conn.hget("two", "two") == "b");
+    BOOST_CHECK((std::string)conn.get("three") == "c");
+}
+
