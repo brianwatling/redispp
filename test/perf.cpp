@@ -11,7 +11,7 @@ using namespace boost::posix_time;
 
 void runFunc(const char* port, size_t count)
 {
-    Connection conn("192.168.65.128", "6379", "", false);//"127.0.0.1", port, "password", false);
+    Connection conn("127.0.0.1", port, "password", false);
 
     std::string key = "somemediumkey2";
     std::string value = "somemediumvalue";
@@ -36,8 +36,6 @@ void runFunc(const char* port, size_t count)
 
     ptime end(microsec_clock::local_time());
 
-    //const long long beginUsec = (long long)begin.tv_sec * 1000000LL + begin.tv_usec;
-    //const long long endUsec = (long long)end.tv_sec * 1000000LL + end.tv_usec;
     std::cout << count << " writes in " << (end - begin).total_microseconds() << " usecs ~= " << (double)count * 1000000.0/(double)(end - begin).total_microseconds() << std::endl;
 
     for(size_t i = 0; i < chunkFactor; ++i)
@@ -63,18 +61,9 @@ int main(int argc, char* argv[])
     if(argc <= 1)
     {
         std::cout << "usage: ./perf <port> [count]" << std::endl;
-        //return 1;
+        return 1;
     }
     int count = argc > 2 ? atoi(argv[2]) : 100000;
     runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    runFunc(argv[1], count);
-    return 1;
+    return 0;
 }

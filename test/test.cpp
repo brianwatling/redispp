@@ -13,8 +13,8 @@ void sleep(size_t seconds)
 
 using namespace redispp;
 
-const char* TEST_PORT = "6379";
-const char* TEST_HOST = "192.168.65.128";
+const char* TEST_PORT = "0";
+const char* TEST_HOST = "127.0.0.1";
 
 BOOST_AUTO_TEST_CASE(set_get_exists_del)
 {
