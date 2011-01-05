@@ -503,9 +503,11 @@ void BaseReply::clearPendingResults()
 {
     ReplyList::iterator cur = conn->outstandingReplies.begin();
     ReplyList::iterator const end = conn->outstandingReplies.iterator_to(*this);
-    for(; cur != end; ++cur)
+    while(cur != end)
     {
-        cur->readResult();
+        BaseReply& reply = *cur;
+        ++cur;
+        reply.readResult();
     }
 }
 
@@ -535,6 +537,7 @@ bool VoidReply::result()
         conn = NULL;
         tmp->readStatusCodeReply();
         storedResult = true;
+        unlink();
     }
     return storedResult;
 }
@@ -564,6 +567,7 @@ bool BoolReply::result()
         Connection* const tmp = conn;
         conn = NULL;
         storedResult = tmp->readIntegerReply() > 0;
+        unlink();
     }
     return storedResult;
 }
@@ -593,6 +597,7 @@ int IntReply::result()
         Connection* const tmp = conn;
         conn = NULL;
         storedResult = tmp->readIntegerReply();
+        unlink();
     }
     return storedResult;
 }
@@ -622,12 +627,13 @@ const std::string& StringReply::result()
         Connection* const tmp = conn;
         conn = NULL;
         tmp->readBulkReply(&storedResult);
+        unlink();
     }
     return storedResult;
 }
 
 MultiBulkEnumerator::MultiBulkEnumerator(Connection* conn)
-: conn(conn), headerDone(false), count(0)
+: BaseReply(conn), headerDone(false), count(0)
 {}
 
 MultiBulkEnumerator::~MultiBulkEnumerator()
@@ -646,6 +652,12 @@ MultiBulkEnumerator::~MultiBulkEnumerator()
 
 bool MultiBulkEnumerator::next(std::string* out)
 {
+    if(!pending.empty())
+    {
+        *out = pending.front();
+        pending.pop_front();
+        return true;
+    }
     if(!conn)
     {
         return false;
@@ -655,6 +667,7 @@ bool MultiBulkEnumerator::next(std::string* out)
 #ifdef REDISPP_ALTBUFFER
         conn->ioStream->flush();
 #endif
+        clearPendingResults();
         headerDone = true;
         char code = 0;
         if(!(*conn->ioStream >> code >> count))
@@ -673,6 +686,7 @@ bool MultiBulkEnumerator::next(std::string* out)
     if(count <= 0)
     {
         conn = NULL;
+        unlink();
         return false;
     }
     --count;

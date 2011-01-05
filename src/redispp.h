@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
+#include <list>
 #include <boost/intrusive/list.hpp>
 
 namespace redispp
@@ -264,31 +265,32 @@ private:
     std::string storedResult;
 };
 
-class MultiBulkEnumerator
+class MultiBulkEnumerator : public BaseReply
 {
     friend class Connection;
 public:
     MultiBulkEnumerator()
-    : conn(NULL), headerDone(false), count(0)
+    : headerDone(false), count(0)
     {}
 
     ~MultiBulkEnumerator();
 
     MultiBulkEnumerator(const MultiBulkEnumerator& other)
-    : conn(other.conn), headerDone(other.headerDone), count(other.count)
+    : BaseReply(other), headerDone(other.headerDone), count(other.count)
     {
-        other.conn = NULL;
+        pending.splice(pending.begin(), other.pending);
     }
 
     MultiBulkEnumerator& operator=(const MultiBulkEnumerator& other)
     {
         if(conn && count > 0)
         {
+            //assume unread data can be discarded, this is the only object that could/would have read it
             std::string tmp;
             while(next(&tmp));
         }
-        conn = other.conn;
-        other.conn = NULL;
+        pending.clear();
+        BaseReply::operator=(other);
         headerDone = other.headerDone;
         count = other.count;
         return *this;
@@ -297,11 +299,25 @@ public:
     bool next(std::string* out);
 
 protected:
+    virtual void readResult()
+    {
+        if(conn && (!headerDone || count > 0))
+        {
+            std::list<std::string> readPending;
+            std::string tmp;
+            while(next(&tmp))
+            {
+                readPending.push_back(tmp);
+            }
+            pending.splice(pending.end(), readPending);
+        }
+    }
+
     MultiBulkEnumerator(Connection* conn);
 
-    mutable Connection* conn;
     bool headerDone;
     int count;
+    mutable std::list<std::string> pending;
 };
 
 class Connection

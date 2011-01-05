@@ -308,5 +308,36 @@ BOOST_AUTO_TEST_CASE(pipelined)
     BOOST_CHECK((std::string)conn.get("one") == "a");
     BOOST_CHECK((std::string)conn.hget("two", "two") == "b");
     BOOST_CHECK((std::string)conn.get("three") == "c");
+
+    {
+        conn.del("hello");
+        IntReply c = conn.lpush("hello", "c");
+        IntReply d = conn.lpush("hello", "d");
+        IntReply b = conn.rpush("hello", "b");
+        IntReply a = conn.rpush("hello", "a");
+        {
+            MultiBulkEnumerator result = conn.lrange("hello", 1, 3);
+            IntReply c = conn.lpush("hello", "c");
+            IntReply d = conn.lpush("hello", "d");
+            IntReply b = conn.rpush("hello", "b");
+            IntReply a = conn.rpush("hello", "a");
+            BOOST_CHECK((int)a == 8);
+            BOOST_CHECK((int)b == 7);
+            BOOST_CHECK((int)d == 6);
+            BOOST_CHECK((int)c == 5);
+            std::string str;
+            BOOST_CHECK(result.next(&str));
+            BOOST_CHECK(str == "c");
+            BOOST_CHECK(result.next(&str));
+            BOOST_CHECK(str == "b");
+            BOOST_CHECK(result.next(&str));
+            BOOST_CHECK(str == "a");
+        }
+        IntReply len = conn.llen("hello");
+        BOOST_CHECK((int)a == 4);
+        BOOST_CHECK((int)b == 3);
+        BOOST_CHECK((int)d == 2);
+        BOOST_CHECK((int)c == 1);
+    }
 }
 
