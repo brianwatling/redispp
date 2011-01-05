@@ -38,6 +38,16 @@ void runFunc(const char* port, size_t count)
     const long long beginUsec = (long long)begin.tv_sec * 1000000LL + begin.tv_usec;
     const long long endUsec = (long long)end.tv_sec * 1000000LL + end.tv_usec;
     std::cout << count << " writes in " << (double)(endUsec - beginUsec)/1000000.0 << " ~= " << (double)count * 1000000.0/(double)(endUsec - beginUsec) << std::endl;
+
+    for(size_t i = 0; i < chunkFactor; ++i)
+    {
+        replies[i].result();
+    }
+
+    if((std::string)conn.get("somemediumkey2") != "somemediumvalue")
+    {
+        throw std::runtime_error("somemediumkey2 != somemediumvalue");
+    }
 }
 
 int main(int argc, char* argv[])

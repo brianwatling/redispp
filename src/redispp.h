@@ -117,6 +117,7 @@ public:
 
     VoidReply& operator=(const VoidReply& other)
     {
+        result();
         BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
@@ -157,6 +158,7 @@ public:
 
     BoolReply& operator=(const BoolReply& other)
     {
+        result();
         BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
@@ -197,6 +199,7 @@ public:
 
     IntReply& operator=(const IntReply& other)
     {
+        result();
         BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
@@ -236,6 +239,7 @@ public:
 
     StringReply& operator=(const StringReply& other)
     {
+        result();
         BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;

@@ -490,10 +490,11 @@ BaseReply::BaseReply(const BaseReply& other)
 
 BaseReply& BaseReply::operator=(const BaseReply& other)
 {
+    unlink();
     conn = other.conn;
-    other.conn = NULL;
     if(conn)
         conn->outstandingReplies.insert(conn->outstandingReplies.iterator_to(other), *this);
+    other.conn = NULL;
     const_cast<BaseReply&>(other).unlink();
     return *this;
 }
