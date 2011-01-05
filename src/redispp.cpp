@@ -473,8 +473,43 @@ Command::~Command()
 {
 }
 
+BaseReply::BaseReply(Connection* conn)
+: conn(conn)
+{
+    conn->outstandingReplies.push_back(*this);
+}
+
+BaseReply::BaseReply(const BaseReply& other)
+: conn(other.conn)
+{
+    other.conn = NULL;
+    if(conn)
+        conn->outstandingReplies.insert(conn->outstandingReplies.iterator_to(other), *this);
+    const_cast<BaseReply&>(other).unlink();
+}
+
+BaseReply& BaseReply::operator=(const BaseReply& other)
+{
+    conn = other.conn;
+    other.conn = NULL;
+    if(conn)
+        conn->outstandingReplies.insert(conn->outstandingReplies.iterator_to(other), *this);
+    const_cast<BaseReply&>(other).unlink();
+    return *this;
+}
+
+void BaseReply::clearPendingResults()
+{
+    ReplyList::iterator cur = conn->outstandingReplies.begin();
+    ReplyList::iterator const end = conn->outstandingReplies.iterator_to(*this);
+    for(; cur != end; ++cur)
+    {
+        cur->readResult();
+    }
+}
+
 VoidReply::VoidReply(Connection* conn)
-: conn(conn), storedResult(false)
+: BaseReply(conn), storedResult(false)
 {}
 
 VoidReply::~VoidReply()
@@ -494,6 +529,7 @@ bool VoidReply::result()
 #ifdef REDISPP_ALTBUFFER
         conn->ioStream->flush();
 #endif
+        clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
         tmp->readStatusCodeReply();
@@ -503,7 +539,7 @@ bool VoidReply::result()
 }
 
 BoolReply::BoolReply(Connection* conn)
-: conn(conn), storedResult(false)
+: BaseReply(conn), storedResult(false)
 {}
 
 BoolReply::~BoolReply()
@@ -523,6 +559,7 @@ bool BoolReply::result()
 #ifdef REDISPP_ALTBUFFER
         conn->ioStream->flush();
 #endif
+        clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
         storedResult = tmp->readIntegerReply() > 0;
@@ -531,7 +568,7 @@ bool BoolReply::result()
 }
 
 IntReply::IntReply(Connection* conn)
-: conn(conn), storedResult(0)
+: BaseReply(conn), storedResult(0)
 {}
 
 IntReply::~IntReply()
@@ -551,6 +588,7 @@ int IntReply::result()
 #ifdef REDISPP_ALTBUFFER
         conn->ioStream->flush();
 #endif
+        clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
         storedResult = tmp->readIntegerReply();
@@ -559,7 +597,7 @@ int IntReply::result()
 }
 
 StringReply::StringReply(Connection* conn)
-: conn(conn)
+: BaseReply(conn)
 {}
 
 StringReply::~StringReply()
@@ -579,6 +617,7 @@ const std::string& StringReply::result()
 #ifdef REDISPP_ALTBUFFER
         conn->ioStream->flush();
 #endif
+        clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
         tmp->readBulkReply(&storedResult);

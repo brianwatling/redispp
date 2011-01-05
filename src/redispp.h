@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
+#include <boost/intrusive/list.hpp>
 
 namespace redispp
 {
@@ -71,26 +72,52 @@ class Connection;
 class ClientSocket;
 class Buffer;
 
-class VoidReply
+typedef boost::intrusive::list_base_hook<boost::intrusive::link_mode<boost::intrusive::auto_unlink> > auto_unlink_hook;
+
+class BaseReply : public auto_unlink_hook
+{
+    friend class Connection;
+public:
+    BaseReply()
+    : conn(NULL)
+    {}
+
+    BaseReply(const BaseReply& other);
+
+    BaseReply& operator=(const BaseReply& other);
+
+    virtual ~BaseReply()
+    {}
+
+protected:
+    virtual void readResult() = 0;
+
+    void clearPendingResults();
+
+    BaseReply(Connection* conn);
+
+    mutable Connection* conn;
+};
+
+typedef boost::intrusive::list<BaseReply, boost::intrusive::constant_time_size<false> > ReplyList;
+
+class VoidReply : public BaseReply
 {
     friend class Connection;
 public:
     VoidReply()
-    : conn(NULL), storedResult(false)
+    : storedResult(false)
     {}
 
     ~VoidReply();
 
     VoidReply(const VoidReply& other)
-    : conn(other.conn), storedResult(other.storedResult)
-    {
-        other.conn = NULL;
-    }
+    : BaseReply(other), storedResult(other.storedResult)
+    {}
 
     VoidReply& operator=(const VoidReply& other)
     {
-        conn = other.conn;
-        other.conn = NULL;
+        BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
     }
@@ -100,35 +127,37 @@ public:
     operator bool()
     {
         return result();
+    }
+
+protected:
+    virtual void readResult()
+    {
+        result();
     }
 
 private:
     VoidReply(Connection* conn);
 
-    mutable Connection* conn;
     bool storedResult;
 };
 
-class BoolReply
+class BoolReply : public BaseReply
 {
     friend class Connection;
 public:
     BoolReply()
-    : conn(NULL), storedResult(false)
+    : storedResult(false)
     {}
 
     ~BoolReply();
 
     BoolReply(const BoolReply& other)
-    : conn(other.conn), storedResult(other.storedResult)
-    {
-        other.conn = NULL;
-    }
+    : BaseReply(other), storedResult(other.storedResult)
+    {}
 
     BoolReply& operator=(const BoolReply& other)
     {
-        conn = other.conn;
-        other.conn = NULL;
+        BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
     }
@@ -140,33 +169,35 @@ public:
         return result();
     }
 
+protected:
+    virtual void readResult()
+    {
+        result();
+    }
+
 private:
     BoolReply(Connection* conn);
 
-    mutable Connection* conn;
     bool storedResult;
 };
 
-class IntReply
+class IntReply : public BaseReply
 {
     friend class Connection;
 public:
     IntReply()
-    : conn(NULL), storedResult(0)
+    : storedResult(0)
     {}
 
     ~IntReply();
 
     IntReply(const IntReply& other)
-    : conn(other.conn), storedResult(other.storedResult)
-    {
-        other.conn = NULL;
-    }
+    : BaseReply(other), storedResult(other.storedResult)
+    {}
 
     IntReply& operator=(const IntReply& other)
     {
-        conn = other.conn;
-        other.conn = NULL;
+        BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
     }
@@ -178,33 +209,34 @@ public:
         return result();
     }
 
+protected:
+    virtual void readResult()
+    {
+        result();
+    }
+
 private:
     IntReply(Connection* conn);
 
-    mutable Connection* conn;
     int storedResult;
 };
 
-class StringReply
+class StringReply : public BaseReply
 {
     friend class Connection;
 public:
     StringReply()
-    : conn(NULL)
     {}
 
     ~StringReply();
 
     StringReply(const StringReply& other)
-    : conn(other.conn), storedResult(other.storedResult)
-    {
-        other.conn = NULL;
-    }
+    : BaseReply(other), storedResult(other.storedResult)
+    {}
 
     StringReply& operator=(const StringReply& other)
     {
-        conn = other.conn;
-        other.conn = NULL;
+        BaseReply::operator=(other);
         storedResult = other.storedResult;
         return *this;
     }
@@ -216,10 +248,15 @@ public:
         return result();
     }
 
+protected:
+    virtual void readResult()
+    {
+        result();
+    }
+
 private:
     StringReply(Connection* conn);
 
-    mutable Connection* conn;
     std::string storedResult;
 };
 
@@ -265,6 +302,7 @@ protected:
 
 class Connection
 {
+    friend class BaseReply;
     friend class VoidReply;
     friend class BoolReply;
     friend class IntReply;
@@ -387,6 +425,7 @@ private:
     std::auto_ptr<ClientSocket> connection;
     std::auto_ptr<std::iostream> ioStream;
     std::auto_ptr<Buffer> buffer;
+    ReplyList outstandingReplies;
     
     DEFINE_COMMAND(Quit, 0);
     DEFINE_COMMAND(Auth, 1);
