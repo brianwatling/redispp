@@ -3,7 +3,8 @@
 - Supports pipelining, using the same functions as synchronous requests
 - The included performance test runs about 5 times faster with pipelining than with synchronous requests (single client/thread, on my laptop, to localhost)
 - Depends on boost library
-- g++, tested on Linux, Mac (OS X 10.6.5)
+- Tested on Linux (g++), Windows (VC++ 2010), Mac (g++, OS X 10.6.5)
+- Includes makefile, bjam jamfiles, and VC++ project
 - Written against Redis 2.0.4
 
 ## Simple example
@@ -73,6 +74,7 @@ Read out a list:
 
 - You should be able to build libredispp.a and libredispp.so by typing 'make'
 - Bjam users can type 'bjam'
+- Windows can use the included VC++ 2010 project file. Be warned I've set it up to simply call bjam. It should be fairly simple to create a regular project or include the source in your own.
 - **WARNING** The unit tests will not pass unless you change TEST_PORT in test/test.cpp. The *entire* redis database will be cleared
 - You should run the unit and performance tests with a temporary database, with no production data
 - The performance test will not run unless you start it with a port (ie ./perf 6379)
