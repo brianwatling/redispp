@@ -2,15 +2,30 @@
 #define BOOST_TEST_MODULE RedisPPTest
 #include <boost/test/included/unit_test.hpp>
 #include <redispp.h>
-#include <sys/time.h>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+void sleep(size_t seconds)
+{
+    Sleep(seconds * 1000);
+}
+#endif
 
 using namespace redispp;
 
-const char* TEST_PORT = "0";
+const char* TEST_PORT = "6379";
+const char* TEST_HOST = "192.168.65.128";
 
 BOOST_AUTO_TEST_CASE(set_get_exists_del)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+#ifdef _WIN32
+    WSADATA wsaData;
+    WORD version;
+    version = MAKEWORD( 2, 0 );
+    WSAStartup( version, &wsaData );
+#endif
+
+    Connection conn(TEST_HOST, TEST_PORT, "password");
 
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.get("hello") == "world");
@@ -22,14 +37,14 @@ BOOST_AUTO_TEST_CASE(set_get_exists_del)
 
 BOOST_AUTO_TEST_CASE(type)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.type("hello") == String);
 }
 
 BOOST_AUTO_TEST_CASE(keys)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     MultiBulkEnumerator response = conn.keys("h?llo");
     std::string key;
@@ -44,14 +59,14 @@ BOOST_AUTO_TEST_CASE(keys)
 
 BOOST_AUTO_TEST_CASE(randomkey)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((bool)conn.exists(conn.randomKey()));
 }
 
 BOOST_AUTO_TEST_CASE(rename_)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.rename("hello", "hello1");
     BOOST_CHECK((std::string)conn.get("hello1") == "world");
@@ -62,7 +77,7 @@ BOOST_AUTO_TEST_CASE(rename_)
 
 BOOST_AUTO_TEST_CASE(dbsize)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.del("hello1");
     int size = conn.dbSize();
@@ -73,10 +88,10 @@ BOOST_AUTO_TEST_CASE(dbsize)
 
 BOOST_AUTO_TEST_CASE(expire_ttl)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.set("hello1", "world");
-    int now = time(NULL);
+    time_t now = time(NULL);
     BOOST_CHECK((bool)conn.expire("hello", 5));
     BOOST_CHECK((bool)conn.expireAt("hello1", now + 5));
     BOOST_CHECK(conn.ttl("hello") <= 5);
@@ -88,7 +103,7 @@ BOOST_AUTO_TEST_CASE(expire_ttl)
 
 BOOST_AUTO_TEST_CASE(select_move)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.select(0);
     conn.set("hello", "world");
     BOOST_CHECK((bool)conn.exists("hello"));
@@ -104,7 +119,7 @@ BOOST_AUTO_TEST_CASE(select_move)
 
 BOOST_AUTO_TEST_CASE(flush)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.dbSize() > 0);
     conn.flushDb();
@@ -122,7 +137,7 @@ BOOST_AUTO_TEST_CASE(flush)
 
 BOOST_AUTO_TEST_CASE(getset)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.getSet("hello", "one") == "world");
     BOOST_CHECK((std::string)conn.get("hello") == "one");
@@ -130,7 +145,7 @@ BOOST_AUTO_TEST_CASE(getset)
 
 BOOST_AUTO_TEST_CASE(setnx)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(!conn.setNX("hello", "one"));
     conn.del("hello");
@@ -139,14 +154,14 @@ BOOST_AUTO_TEST_CASE(setnx)
 
 BOOST_AUTO_TEST_CASE(setex)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.setEx("hello", 5, "world");
     BOOST_CHECK(conn.ttl("hello") <= 5);
 }
 
 BOOST_AUTO_TEST_CASE(incrdecr)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "5");
     BOOST_CHECK(conn.incr("hello") == 6);
     BOOST_CHECK(conn.incrBy("hello", 2) == 8);
@@ -156,7 +171,7 @@ BOOST_AUTO_TEST_CASE(incrdecr)
 
 BOOST_AUTO_TEST_CASE(append)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.append("hello", "one") == 8);
     BOOST_CHECK((std::string)conn.get("hello") == "worldone");
@@ -164,14 +179,14 @@ BOOST_AUTO_TEST_CASE(append)
 
 BOOST_AUTO_TEST_CASE(substr)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.subStr("hello", 1, 3) == "orl");
 }
 
 BOOST_AUTO_TEST_CASE(lists)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK(conn.lpush("hello", "c") == 1);
     BOOST_CHECK(conn.lpush("hello", "d") == 2);
@@ -211,7 +226,7 @@ BOOST_AUTO_TEST_CASE(lists)
 
 BOOST_AUTO_TEST_CASE(sets)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK((bool)conn.sadd("hello", "world"));
     BOOST_CHECK((bool)conn.sisMember("hello", "world"));
@@ -241,7 +256,7 @@ BOOST_AUTO_TEST_CASE(sets)
 
 BOOST_AUTO_TEST_CASE(hashes)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK((bool)conn.hset("hello", "world", "one"));
     BOOST_CHECK((bool)conn.hset("hello", "mars", "two"));
@@ -279,8 +294,8 @@ BOOST_AUTO_TEST_CASE(hashes)
 
 BOOST_AUTO_TEST_CASE(misc)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
-    int now = time(NULL);
+    Connection conn(TEST_HOST, TEST_PORT, "password");
+    time_t now = time(NULL);
     ::sleep(2);
     conn.save();
     BOOST_CHECK(conn.lastSave() > now);
@@ -293,7 +308,7 @@ BOOST_AUTO_TEST_CASE(misc)
 
 BOOST_AUTO_TEST_CASE(pipelined)
 {
-    Connection conn("127.0.0.1", TEST_PORT, "password");
+    Connection conn(TEST_HOST, TEST_PORT, "password");
 
     {
         VoidReply a = conn.set("one", "a");

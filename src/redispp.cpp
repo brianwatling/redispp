@@ -1,8 +1,48 @@
 #include "redispp.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+typedef int ssize_t;
+typedef char* RecvBufferType;
+
+int close(SOCKET sock)
+{
+    return closesocket(sock);
+}
+
+static bool setSocketFlag(SOCKET sock, int level, int optname, bool value)
+{
+    BOOL val = value ? TRUE : FALSE;
+    return 0 == setsockopt(sock, level, optname, (char*)&value, sizeof(value));
+}
+
+static const char* getLastErrorMessage()
+{
+    return gai_strerror(WSAGetLastError());
+}
+
+#else
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+
+typedef int SOCKET;
+typedef void* RecvBufferType;
+
+static bool setSocketFlag(SOCKET sock, int level, int optname, bool value)
+{
+    int val = value ? 1 : 0;
+    return 0 == setsockopt(sock, level, optname, &value, sizeof(value));
+}
+
+static const char* getLastErrorMessage()
+{
+    return strerror(errno);
+}
+
+#endif
 #include <stdio.h>
 #include <errno.h>
 #include <boost/noncopyable.hpp>
@@ -21,8 +61,6 @@ public:
     ClientSocket(const char* host, const char* port)
     : sockFd(-1), streamBuf(this)
     {
-        memset(&msgHeader, NULL, sizeof(msgHeader));
-
         struct addrinfo hints;
         struct addrinfo* res = NULL;
 
@@ -32,25 +70,24 @@ public:
         hints.ai_flags = AI_PASSIVE;// fill in my IP for me
         if(getaddrinfo(host, port, &hints, &res))
         {
-            throw std::runtime_error(std::string("error getting address info for ") + host + ":" + port);
+            throw std::runtime_error(std::string("error getting address info for ") + host + ":" + port + " (" + getLastErrorMessage() + ")");
         }
 
         sockFd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
         if(sockFd < 0)
         {
             freeaddrinfo(res);
-            throw std::runtime_error(std::string("error connecting to ") + host + ":" + port + "(" + strerror(errno) + ")");
+            throw std::runtime_error(std::string("error connecting to ") + host + ":" + port + " (" + getLastErrorMessage() + ")");
         }
 
-        int intOpt = 1;
-        setsockopt(sockFd, SOL_SOCKET, SO_REUSEADDR, &intOpt, sizeof(intOpt));
-        setsockopt(sockFd, SOL_SOCKET, SO_KEEPALIVE, &intOpt, sizeof(intOpt));
+        setSocketFlag(sockFd, SOL_SOCKET, SO_REUSEADDR, true);
+        setSocketFlag(sockFd, SOL_SOCKET, SO_KEEPALIVE, true);
 
         if(connect(sockFd, res->ai_addr, res->ai_addrlen))
         {
             freeaddrinfo(res);
             close(sockFd);
-            throw std::runtime_error(std::string("error connecting to ") + host + ":" + port + "(" + strerror(errno) + ")");
+            throw std::runtime_error(std::string("error connecting to ") + host + ":" + port + "(" + getLastErrorMessage() + ")");
         }
 
         freeaddrinfo(res);
@@ -58,11 +95,10 @@ public:
 
     void tcpNoDelay(bool enable)
     {
-        int flag = enable ? 1 : 0;
-        const int ret = setsockopt(sockFd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-        if(ret)
+        const bool ret = setSocketFlag(sockFd, IPPROTO_TCP, TCP_NODELAY, enable);
+        if(!ret)
         {
-            throw std::runtime_error(std::string("error setting TCP_NODELAY: ") + strerror(errno));
+            throw std::runtime_error(std::string("error setting TCP_NODELAY: ") + getLastErrorMessage());
         }
     }
 
@@ -74,7 +110,7 @@ public:
             const ssize_t ret = ::send(sockFd, (const char*)data + sent, len - sent, 0);
             if(ret <= 0)
             {
-                throw std::runtime_error(std::string("error writing to socket: ") + strerror(errno));
+                throw std::runtime_error(std::string("error writing to socket: ") + getLastErrorMessage());
             }
             sent += ret;
         }
@@ -82,10 +118,10 @@ public:
 
     size_t read(void* data, size_t len)
     {
-        const ssize_t ret = ::recv(sockFd, data, len, 0);
+        const ssize_t ret = ::recv(sockFd, (RecvBufferType)data, len, 0);
         if(ret <= 0)
         {
-            throw std::runtime_error(std::string("error reading from socket: ") + strerror(errno));
+            throw std::runtime_error(std::string("error reading from socket: ") + getLastErrorMessage());
         }
         return ret;
     }
@@ -176,8 +212,7 @@ public:
     };
 
 private:
-    int sockFd;
-    struct msghdr msgHeader;
+    SOCKET sockFd;
     StreamBuf streamBuf;
 };
 

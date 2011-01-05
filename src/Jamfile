@@ -2,4 +2,4 @@ project redispp
     : usage-requirements <include>.
     ;
 
-lib redispp : redispp.cpp ;
+lib redispp : redispp.cpp /site-config//socket : <link>static ;
