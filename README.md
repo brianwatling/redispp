@@ -15,7 +15,7 @@
 
 - Reply objects take care of reading the response lazily, on demand
 - The response is read in either the destructor or when the return value is used
-- Be sure reply objects are destroyed in the order they are created
+- The objects can be nested/scoped in any order. All outstanding replies are read and cached for later when a newer request's response is used.
 - See test/perf.cpp or test/test.cpp for more examples
 
 Up to 64 requests 'on the wire':
@@ -27,10 +27,13 @@ Up to 64 requests 'on the wire':
     }
 
 Save an object using pipelining. ~BoolReply takes care of reading the responses in order.
-    BoolReply a = conn.hset("computer", "os", "linux");
-    BoolReply b = conn.hset("computer", "speed", "3Ghz");
-    BoolReply c = conn.hset("computer", "RAM", "8GB");
-    BoolReply d = conn.hset("computer", "cores", "4");
+    {
+        BoolReply a = conn.hset("computer", "os", "linux");
+        BoolReply b = conn.hset("computer", "speed", "3Ghz");
+        BoolReply c = conn.hset("computer", "RAM", "8GB");
+        BoolReply d = conn.hset("computer", "cores", "4");
+    }
+    //here all the replies have been cleared off conn's socket
 
 Start loading a value, then use it later:
     StringReply value = conn.get("world");
@@ -40,6 +43,31 @@ Start loading a value, then use it later:
 These are resolved immediately:
     int hlen = conn.hlen("computer");
     std::string value = conn.get("world");
+
+This demonstrates arbitrary nesting/scoping and works as expected (see test/test.cpp). There's no problems caused by a and readA outliving b and c:
+    {
+        VoidReply a = conn.set("one", "a");
+        StringReply readA = conn.get("one");
+        {
+            BoolReply b = conn.hset("two", "two", "b");
+            VoidReply c = conn.set("three", "c");
+        }
+        BOOST_CHECK(readA.result() == "a");
+    }
+
+## Multi Bulk Replies
+
+Request that have multi-bulk replies supply a MultiBulkEnumerator as the return type. The MultiBulkEnumerator will read the data lazily as requested.
+
+Read out a list:
+
+    conn.lpush("hello", "a")
+    conn.lpush("hello", "b")
+    conn.lpush("hello", "c")
+    MultiBulkEnumerator result = conn.lrange("hello", 1, 3);
+    std::string result;
+    while(result.next(&result))
+        std::cout << result << std::endl;
 
 ## Building
 
