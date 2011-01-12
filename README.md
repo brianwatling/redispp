@@ -111,6 +111,14 @@ Read out a list:
 - You should run the unit and performance tests with a temporary database, with no production data
 - The performance test will not run unless you start it with a port (ie ./perf 6379)
 
+## TODO
+
+- add a way to listen for messages after subscribing to a channel
+- fill in the missing requests
+- cleanup code, move stuff out of the header to the .cpp file
+- implement a clean method for watch and related functions (using transaction objects)
+- write a consistent hashing wrapper?
+
 ## License
 
 Public domain. Credit is appreciated and I would like to hear about how you use it.
