@@ -170,6 +170,7 @@ public:
             if(pbase() != pptr())
             {
                 conn->write(pbase(), pptr() - pbase());
+                setp(outBuffer, outBuffer + sizeof(outBuffer) - 1);
             }
             return 1;
         }
