@@ -609,9 +609,6 @@ private:
 
     //TODO: watch
     //TODO: unwatch
-    //TODO: multi
-    //TODO: exec
-    //TODO: discard
 
     DEFINE_COMMAND(Multi, 0);
     DEFINE_COMMAND(Exec, 0);

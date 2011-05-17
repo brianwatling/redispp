@@ -102,6 +102,17 @@ Read out a list:
     while(result.next(&result))
         std::cout << result << std::endl;
 
+## Transactions
+
+The client has basic support for transactions. It currently can open a MULTI and close it with an EXEC. Closing with a DISCARD is not supported yet. WATCH and UNWATCH may also come soon. Here's an example of how to use transactions. Note: it's very important to use the defered reply objects with transactions, or else the connection will be corrupted. (see trans.cpp for more detail).
+
+    Transaction trans(&conn);
+    VoidReply one = conn.set("x", "1");
+    VoidReply two = conn.set("y", "21");
+    StringReply three = conn.get("x");
+    trans.commit();
+    //access one, two, and three here
+
 ## Building
 
 - You should be able to build libredispp.a and libredispp.so by typing 'make'
