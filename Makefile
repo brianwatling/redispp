@@ -1,4 +1,4 @@
-all: libredispp.a libredispp.so unittests perftest
+all: libredispp.a libredispp.so unittests perftest multitest
 
 CXXFLAGS ?= -g -O2 -Isrc
 
@@ -22,5 +22,8 @@ unittests: test.o libredispp.a
 perftest: perf.o libredispp.a
 	g++ $^ libredispp.a -o $@
 
+multitest: multi.o libredispp.a
+	g++ $^ libredispp.a -o $@
+
 clean:
-	rm -f *.o libredispp.a libredispp.so perftest unittests
+	rm -f *.o libredispp.a libredispp.so perftest unittests multitest

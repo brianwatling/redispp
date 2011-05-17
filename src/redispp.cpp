@@ -203,6 +203,7 @@ public:
             {
                 numRead += conn->read(dest + numRead, size - numRead);
             } while(numRead < size);
+            setg(inBuffer, inBuffer, inBuffer);
             return numRead;
         }
 
