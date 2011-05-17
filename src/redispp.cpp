@@ -45,7 +45,6 @@ static const char* getLastErrorMessage()
 
 #endif
 #include <stdio.h>
-#include <boost/noncopyable.hpp>
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
@@ -514,6 +513,10 @@ BaseReply::BaseReply(Connection* conn)
 : conn(conn)
 {
     conn->outstandingReplies.push_back(*this);
+    if(conn->transaction)
+    {
+        conn->transaction->replies.count += 1;
+    }
 }
 
 BaseReply::BaseReply(const BaseReply& other)
@@ -738,6 +741,7 @@ Connection::Connection(const char* host, const char* port, const char* password,
 #else
   buffer(new Buffer(*ioStream))
 #endif
+  , transaction(NULL)
 {
     if(noDelay)
     {
@@ -1257,6 +1261,90 @@ IntReply Connection::publish(const std::string& channel, const std::string& mess
 {
     EXECUTE_COMMAND_SYNC2(Publish, channel, message);
     return IntReply(this);
+}
+
+void Connection::multi()
+{
+    EXECUTE_COMMAND_SYNC(Multi);
+}
+
+void Connection::exec()
+{
+    EXECUTE_COMMAND_SYNC(Exec);
+}
+
+void Connection::discard()
+{
+    EXECUTE_COMMAND_SYNC(Discard);
+}
+
+Transaction::Transaction(Connection* conn)
+: conn(conn), replies(conn)
+{
+    if(conn->transaction)
+        throw std::runtime_error("cannot start a transaction while the connection is already in one");
+
+    conn->multi();
+
+    conn->transaction = this;
+    replies.state = Dirty;
+}
+
+Transaction::~Transaction()
+{
+    try
+    {
+        abort();
+    }
+    catch(...)
+    {}
+    conn->transaction = NULL;
+}
+
+void Transaction::commit()
+{
+    if(replies.state == Dirty)
+    {
+        replies.state = Committed;
+        conn->exec();
+        replies.readResult();
+    }
+}
+
+void Transaction::abort()
+{
+    if(replies.state == Dirty)
+    {
+        replies.state = Aborted;
+        conn->discard();
+        replies.readResult();
+    }
+}
+
+void QueuedReply::readResult()
+{
+    if(!conn)
+        return;
+
+    Connection* const tmp = conn;
+    conn = NULL;
+    tmp->readStatusCodeReply();//one +OK for the MULTI
+    //one +QUEUED per queued request (including this QueuedReply)
+    for(size_t i = 0; i < count; ++i)
+    {
+        tmp->readStatusCodeReply();
+    }
+    if(state == Committed)
+    {
+        const int expectedCount = tmp->readIntegerReply();
+        if(count != expectedCount)
+            throw std::runtime_error("transaction item count did not match");
+    }
+    else if(state == Aborted)
+    {
+        tmp->readStatusCodeReply();
+        //TODO: discard all remaining items to be parsed
+    }
 }
 
 }; //namespace redispp

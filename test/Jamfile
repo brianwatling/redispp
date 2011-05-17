@@ -8,3 +8,5 @@ run test.cpp /redispp ;
 run perf.cpp /redispp ;
 
 run multi.cpp /redispp ;
+
+run trans.cpp /redispp ;

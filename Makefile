@@ -1,6 +1,6 @@
-all: libredispp.a libredispp.so unittests perftest multitest
+all: libredispp.a libredispp.so unittests perftest multitest transtest
 
-CXXFLAGS ?= -g -O2 -Isrc
+CXXFLAGS ?= -g -O0 -Isrc
 
 VPATH += src test
 
@@ -25,5 +25,8 @@ perftest: perf.o libredispp.a
 multitest: multi.o libredispp.a
 	g++ $^ libredispp.a -o $@
 
+transtest: trans.o libredispp.a
+	g++ $^ libredispp.a -o $@
+
 clean:
-	rm -f *.o libredispp.a libredispp.so perftest unittests multitest
+	rm -f *.o libredispp.a libredispp.so perftest unittests multitest transtest

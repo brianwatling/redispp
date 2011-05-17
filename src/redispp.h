@@ -7,6 +7,7 @@
 #include <memory>
 #include <list>
 #include <boost/intrusive/list.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace redispp
 {
@@ -101,6 +102,41 @@ protected:
 };
 
 typedef boost::intrusive::list<BaseReply, boost::intrusive::constant_time_size<false> > ReplyList;
+
+class Transaction;
+
+enum TransactionState
+{
+    Blank,
+    Dirty,
+    Aborted,
+    Committed,
+};
+
+class QueuedReply : public BaseReply
+{
+    friend class BaseReply;
+    friend class Connection;
+    friend class Transaction;
+public:
+    QueuedReply()
+    : count(0), state(Blank)
+    {}
+
+    ~QueuedReply()
+    {}
+
+protected:
+    virtual void readResult();
+
+private:
+    QueuedReply(Connection* conn)
+    : BaseReply(conn), count(0), state(Blank)
+    {}
+
+    size_t count;
+    TransactionState state;
+};
 
 class VoidReply : public BaseReply
 {
@@ -320,14 +356,35 @@ protected:
     mutable std::list<std::string> pending;
 };
 
+class Connection;
+
+class Transaction : boost::noncopyable
+{
+    friend class BaseReply;
+public:
+    Transaction(Connection* conn);
+
+    ~Transaction();
+
+    void commit();
+
+    void abort();
+
+private:
+    Connection* conn;
+    QueuedReply replies;
+};
+
 class Connection
 {
     friend class BaseReply;
+    friend class QueuedReply;
     friend class VoidReply;
     friend class BoolReply;
     friend class IntReply;
     friend class StringReply;
     friend class MultiBulkEnumerator;
+    friend class Transaction;
 public:
     Connection(const char* host, const char* port, const char* password = NULL, bool noDelay = false);
 
@@ -446,6 +503,7 @@ private:
     std::auto_ptr<std::iostream> ioStream;
     std::auto_ptr<Buffer> buffer;
     ReplyList outstandingReplies;
+    Transaction* transaction;
     
     DEFINE_COMMAND(Quit, 0);
     DEFINE_COMMAND(Auth, 1);
@@ -554,6 +612,14 @@ private:
     //TODO: multi
     //TODO: exec
     //TODO: discard
+
+    DEFINE_COMMAND(Multi, 0);
+    DEFINE_COMMAND(Exec, 0);
+    DEFINE_COMMAND(Discard, 0);
+
+    void multi();
+    void exec();
+    void discard();
 };
 
 };
