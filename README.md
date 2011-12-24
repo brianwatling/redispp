@@ -12,6 +12,7 @@
 This client's pipelining allows it to really push the redis server, even with one client. I ran the included performance benchmark on my Ubuntu 9.10 64-bit virtual machine. The physical machine is quad-core @ 3Ghz with 8GB RAM @ 800Mhz. At 256 requests 'on-the-wire', I reached approximately 230k writes per second with one connection (a write is: conn.set("somemediumkey2", "somemediumvalue")). I was able to reach nearly 260k writes per second with 4096 requests 'on-the-wire'. Below is test/perf.cpp's output for various amounts of outstanding requests.
 
 256 requests on the wire:
+
     bwatling@ubuntu:~/Desktop/redispp$ for cur in `seq 1 10`; do ./test/bin/perf.test/gcc-4.4.1/release/perf 6379 1000000; done
     1000000 writes in 4451367 usecs ~= 224650 requests per second
     1000000 writes in 4301082 usecs ~= 232500 requests per second
@@ -25,6 +26,7 @@ This client's pipelining allows it to really push the redis server, even with on
     1000000 writes in 4257261 usecs ~= 234893 requests per second
 
 4096 requests on the wire:
+
     bwatling@ubuntu:~/Desktop/redispp$ for cur in `seq 1 10`; do ./test/bin/perf.test/gcc-4.4.1/release/perf 6379 1000000; done
     1000000 writes in 4035970 usecs ~= 247772 requests per second
     1000000 writes in 3855737 usecs ~= 259354 requests per second
@@ -52,6 +54,7 @@ In comparison, with a single client and no pipelining this machine could handle 
 - See test/perf.cpp or test/test.cpp for more examples
 
 Up to 64 requests 'on the wire':
+
     VoidReply replies[64];
 
     for(size_t i = 0; i < count; ++i)
@@ -60,6 +63,7 @@ Up to 64 requests 'on the wire':
     }
 
 Save an object using pipelining. ~BoolReply takes care of reading the responses in order.
+
     {
         BoolReply a = conn.hset("computer", "os", "linux");
         BoolReply b = conn.hset("computer", "speed", "3Ghz");
@@ -69,15 +73,18 @@ Save an object using pipelining. ~BoolReply takes care of reading the responses 
     //here all the replies have been cleared off conn's socket
 
 Start loading a value, then use it later:
+
     StringReply value = conn.get("world");
     ...//do stuff
     std::string theValue = value;
 
 These are resolved immediately:
+
     int hlen = conn.hlen("computer");
     std::string value = conn.get("world");
 
 This demonstrates arbitrary nesting/scoping and works as expected (see test/test.cpp). There's no problems caused by a and readA outliving b and c:
+
     {
         VoidReply a = conn.set("one", "a");
         StringReply readA = conn.get("one");
