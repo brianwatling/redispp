@@ -19,10 +19,10 @@ const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 bool init_unit_test()
 {
 #ifdef _WIN32
-	WSADATA wsaData;
-	WORD version;
-	version = MAKEWORD( 2, 0 );
-	WSAStartup( version, &wsaData );
+    WSADATA wsaData;
+    WORD version;
+    version = MAKEWORD( 2, 0 );
+    WSAStartup( version, &wsaData );
 #endif
 	return true;
 }

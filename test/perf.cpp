@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     if(argc <= 1)
     {
 #ifdef UNIX_DOMAIN_SOCKET
-    	std::cout << "usage: ./perf <socket> [count]" << std::endl;
+        std::cout << "usage: ./perf <socket> [count]" << std::endl;
 #else
         std::cout << "usage: ./perf <port> [count]" << std::endl;
 #endif

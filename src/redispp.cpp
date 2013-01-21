@@ -97,9 +97,9 @@ public:
     ClientSocket(const char* unixDomainSocket)
     : sockFd(-1), streamBuf(this)
     {
-    	struct sockaddr_un sockaddr;
-    	sockaddr.sun_family = AF_UNIX;
-    	strncpy(sockaddr.sun_path, unixDomainSocket, sizeof(sockaddr.sun_path));
+        struct sockaddr_un sockaddr;
+        sockaddr.sun_family = AF_UNIX;
+        strncpy(sockaddr.sun_path, unixDomainSocket, sizeof(sockaddr.sun_path));
 
         sockFd = socket(AF_UNIX, SOCK_STREAM, 0);
         if(sockFd < 0)
@@ -115,7 +115,6 @@ public:
             close(sockFd);
             throw std::runtime_error(std::string("error connecting to ") + unixDomainSocket + "(" + getLastErrorMessage() + ")");
         }
-
     }
 #endif
 
