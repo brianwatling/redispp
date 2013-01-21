@@ -1,5 +1,4 @@
-#define BOOST_TEST_MAIN
-#define BOOST_TEST_MODULE RedisPPTest
+#define BOOST_TEST_ALTERNATIVE_INIT_API
 #include <boost/test/included/unit_test.hpp>
 #include <redispp.h>
 #include <time.h>
@@ -13,10 +12,11 @@ void sleep(size_t seconds)
 
 using namespace redispp;
 
-const char* TEST_PORT = "0";
+const char* TEST_PORT = "6379";
 const char* TEST_HOST = "127.0.0.1";
+const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 
-BOOST_AUTO_TEST_CASE(set_get_exists_del)
+bool init_unit_test()
 {
 #ifdef _WIN32
     WSADATA wsaData;
@@ -24,9 +24,27 @@ BOOST_AUTO_TEST_CASE(set_get_exists_del)
     version = MAKEWORD( 2, 0 );
     WSAStartup( version, &wsaData );
 #endif
+	return true;
+}
 
-    Connection conn(TEST_HOST, TEST_PORT, "password");
+#ifdef UNIX_DOMAIN_SOCKET
+struct F {
+	F() : conn(TEST_UNIX_DOMAIN_SOCKET, "password") {BOOST_TEST_MESSAGE( "Set up fixture" );}
+	~F() {BOOST_TEST_MESSAGE( "Tore down fixture" );}
+	Connection conn;
+};
+#else
+struct F {
+	F() : conn(TEST_HOST, TEST_PORT, "password") {BOOST_TEST_MESSAGE( "Set up fixture" );}
+	~F() {BOOST_TEST_MESSAGE( "Tore down fixture" );}
+	Connection conn;
+};
+#endif
 
+BOOST_FIXTURE_TEST_SUITE( s, F )
+
+BOOST_AUTO_TEST_CASE(set_get_exists_del)
+{
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.get("hello") == "world");
     BOOST_CHECK((bool)conn.exists("hello"));
@@ -37,14 +55,12 @@ BOOST_AUTO_TEST_CASE(set_get_exists_del)
 
 BOOST_AUTO_TEST_CASE(type)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.type("hello") == String);
 }
 
 BOOST_AUTO_TEST_CASE(keys)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     MultiBulkEnumerator response = conn.keys("h?llo");
     std::string key;
@@ -59,14 +75,12 @@ BOOST_AUTO_TEST_CASE(keys)
 
 BOOST_AUTO_TEST_CASE(randomkey)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((bool)conn.exists(conn.randomKey()));
 }
 
 BOOST_AUTO_TEST_CASE(rename_)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.rename("hello", "hello1");
     BOOST_CHECK((std::string)conn.get("hello1") == "world");
@@ -77,7 +91,6 @@ BOOST_AUTO_TEST_CASE(rename_)
 
 BOOST_AUTO_TEST_CASE(dbsize)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.del("hello1");
     int size = conn.dbSize();
@@ -88,7 +101,6 @@ BOOST_AUTO_TEST_CASE(dbsize)
 
 BOOST_AUTO_TEST_CASE(expire_ttl)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     conn.set("hello1", "world");
     time_t now = time(NULL);
@@ -103,7 +115,6 @@ BOOST_AUTO_TEST_CASE(expire_ttl)
 
 BOOST_AUTO_TEST_CASE(select_move)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.select(0);
     conn.set("hello", "world");
     BOOST_CHECK((bool)conn.exists("hello"));
@@ -119,7 +130,6 @@ BOOST_AUTO_TEST_CASE(select_move)
 
 BOOST_AUTO_TEST_CASE(flush)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.dbSize() > 0);
     conn.flushDb();
@@ -137,7 +147,6 @@ BOOST_AUTO_TEST_CASE(flush)
 
 BOOST_AUTO_TEST_CASE(getset)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.getSet("hello", "one") == "world");
     BOOST_CHECK((std::string)conn.get("hello") == "one");
@@ -145,7 +154,6 @@ BOOST_AUTO_TEST_CASE(getset)
 
 BOOST_AUTO_TEST_CASE(setnx)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(!conn.setNX("hello", "one"));
     conn.del("hello");
@@ -154,14 +162,12 @@ BOOST_AUTO_TEST_CASE(setnx)
 
 BOOST_AUTO_TEST_CASE(setex)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.setEx("hello", 5, "world");
     BOOST_CHECK(conn.ttl("hello") <= 5);
 }
 
 BOOST_AUTO_TEST_CASE(incrdecr)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "5");
     BOOST_CHECK(conn.incr("hello") == 6);
     BOOST_CHECK(conn.incrBy("hello", 2) == 8);
@@ -171,7 +177,6 @@ BOOST_AUTO_TEST_CASE(incrdecr)
 
 BOOST_AUTO_TEST_CASE(append)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK(conn.append("hello", "one") == 8);
     BOOST_CHECK((std::string)conn.get("hello") == "worldone");
@@ -179,14 +184,12 @@ BOOST_AUTO_TEST_CASE(append)
 
 BOOST_AUTO_TEST_CASE(substr)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.set("hello", "world");
     BOOST_CHECK((std::string)conn.subStr("hello", 1, 3) == "orl");
 }
 
 BOOST_AUTO_TEST_CASE(lists)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK(conn.lpush("hello", "c") == 1);
     BOOST_CHECK(conn.lpush("hello", "d") == 2);
@@ -226,7 +229,6 @@ BOOST_AUTO_TEST_CASE(lists)
 
 BOOST_AUTO_TEST_CASE(sets)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK((bool)conn.sadd("hello", "world"));
     BOOST_CHECK((bool)conn.sisMember("hello", "world"));
@@ -256,7 +258,6 @@ BOOST_AUTO_TEST_CASE(sets)
 
 BOOST_AUTO_TEST_CASE(hashes)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     conn.del("hello");
     BOOST_CHECK((bool)conn.hset("hello", "world", "one"));
     BOOST_CHECK((bool)conn.hset("hello", "mars", "two"));
@@ -294,7 +295,6 @@ BOOST_AUTO_TEST_CASE(hashes)
 
 BOOST_AUTO_TEST_CASE(misc)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
     time_t now = time(NULL);
     ::sleep(2);
     conn.save();
@@ -308,8 +308,6 @@ BOOST_AUTO_TEST_CASE(misc)
 
 BOOST_AUTO_TEST_CASE(pipelined)
 {
-    Connection conn(TEST_HOST, TEST_PORT, "password");
-
     {
         VoidReply a = conn.set("one", "a");
         StringReply readA = conn.get("one");
@@ -355,4 +353,6 @@ BOOST_AUTO_TEST_CASE(pipelined)
         BOOST_CHECK((int)c == 1);
     }
 }
+
+BOOST_AUTO_TEST_SUITE_END()
 

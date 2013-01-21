@@ -9,9 +9,13 @@
 using namespace redispp;
 using namespace boost::posix_time;
 
-void runFunc(const char* port, size_t count)
+void runFunc(const char* arg, size_t count)
 {
-    Connection conn("127.0.0.1", port, "password", false);
+#ifdef UNIX_DOMAIN_SOCKET
+    Connection conn(arg, NULL);
+#else
+    Connection conn("localhost", arg, NULL);
+#endif
 
     std::string key = "somemediumkey2";
     std::string value = "somemediumvalue";
@@ -60,7 +64,11 @@ int main(int argc, char* argv[])
 
     if(argc <= 1)
     {
+#ifdef UNIX_DOMAIN_SOCKET
+        std::cout << "usage: ./perf <socket> [count]" << std::endl;
+#else
         std::cout << "usage: ./perf <port> [count]" << std::endl;
+#endif
         return 1;
     }
     int count = argc > 2 ? atoi(argv[2]) : 100000;

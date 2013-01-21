@@ -386,7 +386,10 @@ class Connection
     friend class MultiBulkEnumerator;
     friend class Transaction;
 public:
-    Connection(const char* host, const char* port, const char* password = NULL, bool noDelay = false);
+    Connection(const char* host, const char* port, const char* password, bool noDelay = false);
+#ifndef _WIN32
+    Connection(const char* unixDomainSocket, const char* password);
+#endif
 
     ~Connection();
 
