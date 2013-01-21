@@ -10,6 +10,7 @@ using namespace std;
 
 const char* TEST_PORT = "6379";
 const char* TEST_HOST = "127.0.0.1";
+const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 
 int main(int argc, char* argv[])
 {
@@ -20,7 +21,11 @@ int main(int argc, char* argv[])
     WSAStartup( version, &wsaData );
 #endif
 
-    Connection conn(TEST_HOST, TEST_PORT);
+#ifdef UNIX_DOMAIN_SOCKET
+    Connection conn(TEST_UNIX_DOMAIN_SOCKET, NULL);
+#else
+    Connection conn(TEST_HOST, TEST_PORT, NULL);
+#endif
 
     conn.set("x", "a");
     conn.set("y", "b");
