@@ -25,6 +25,7 @@ static const char* getLastErrorMessage()
 
 #else
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
@@ -91,6 +92,31 @@ public:
 
         freeaddrinfo(res);
     }
+
+#ifndef _WIN32
+    ClientSocket(const char* unixDomainSocket)
+    : sockFd(-1), streamBuf(this)
+    {
+        struct sockaddr_un sockaddr;
+        sockaddr.sun_family = AF_UNIX;
+        strncpy(sockaddr.sun_path, unixDomainSocket, sizeof(sockaddr.sun_path));
+
+        sockFd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if(sockFd < 0)
+        {
+            throw std::runtime_error(std::string("error connecting to ") + unixDomainSocket + " (" + getLastErrorMessage() + ")");
+        }
+
+        setSocketFlag(sockFd, SOL_SOCKET, SO_REUSEADDR, true);
+        setSocketFlag(sockFd, SOL_SOCKET, SO_KEEPALIVE, true);
+
+        if(connect(sockFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)))
+        {
+            close(sockFd);
+            throw std::runtime_error(std::string("error connecting to ") + unixDomainSocket + "(" + getLastErrorMessage() + ")");
+        }
+    }
+#endif
 
     void tcpNoDelay(bool enable)
     {
@@ -753,6 +779,23 @@ Connection::Connection(const char* host, const char* port, const char* password,
         authenticate(password);
     }
 }
+
+#ifndef _WIN32
+Connection::Connection(const char* unixDomainSocket, const char* password)
+: connection(new ClientSocket(unixDomainSocket)), ioStream(new std::iostream(connection->getStreamBuf())),
+#ifndef REDISPP_ALTBUFFER
+  buffer(new Buffer(100*1024))
+#else
+  buffer(new Buffer(*ioStream))
+#endif
+  , transaction(NULL)
+{
+    if(password)
+    {
+        authenticate(password);
+    }
+}
+#endif
 
 Connection::~Connection()
 {
