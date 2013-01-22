@@ -325,7 +325,7 @@ public:
         *spot++ = '\n';
     }
 
-    void writeArg(int const& arg)
+    void writeArg(int64_t const& arg)
     {
         namespace qi = boost::spirit::qi;
         namespace karma = boost::spirit::karma;
