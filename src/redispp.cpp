@@ -210,25 +210,40 @@ public:
         std::streamsize xsgetn(char* dest, std::streamsize size)
         {
             std::streamsize numRead = 0;
-            char* const beg = gptr();
-            char* const end = egptr();
-            if(beg < end)
-            {
-                const std::streamsize avail = end - beg;
-                numRead = std::min<std::streamsize>(size, avail);
-                char* const newBeg = beg + numRead;
-                std::copy(beg, newBeg, dest);
-                if(newBeg != end)
-                {
-                    setg(newBeg, newBeg, end);
-                    return numRead;
-                }
-            }
             while(numRead < size)
             {
-                numRead += conn->read(dest + numRead, size - numRead);
+                char* const beg = gptr();
+                char* const end = egptr();
+                if(beg < end)
+                {
+                    const std::streamsize avail = end - beg;
+                    const std::streamsize toRead = std::min<std::streamsize>(size - numRead, avail);
+                    char* const newBeg = beg + toRead;
+                    std::copy(beg, newBeg, dest + numRead);
+                    numRead += toRead;
+                    if(newBeg != end)
+                    {
+                        setg(newBeg, newBeg, end);
+                        return numRead;
+                    }
+                }
+                setg(inBuffer, inBuffer, inBuffer);
+                const std::streamsize remaining = size - numRead;
+                if(remaining > 0)
+                {
+                    if(remaining > std::streamsize(sizeof(inBuffer)))
+                    {
+                        while(numRead < size)
+                        {
+                            numRead += conn->read(dest + numRead, size - numRead);
+                        }
+                    }
+                    else
+                    {
+                        underflow();
+                    }
+                }
             }
-            setg(inBuffer, inBuffer, inBuffer);
             return numRead;
         }
 

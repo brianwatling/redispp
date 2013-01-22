@@ -8,7 +8,7 @@
 using namespace redispp;
 using namespace std;
 
-const char* TEST_PORT = "6379";
+const char* TEST_PORT = "0";
 const char* TEST_HOST = "127.0.0.1";
 const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 
