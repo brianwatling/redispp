@@ -141,7 +141,8 @@ The client has basic support for transactions. It currently can open a MULTI and
 
 Public domain. Credit is appreciated and I would like to hear about how you use it.
 
-## Author
+## Contributors
 
 - Brian Watling
+- Alex Ianus
 
