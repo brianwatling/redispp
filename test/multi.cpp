@@ -22,9 +22,9 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef UNIX_DOMAIN_SOCKET
-    Connection conn(TEST_UNIX_DOMAIN_SOCKET, NULL);
+    Connection conn(TEST_UNIX_DOMAIN_SOCKET, "");
 #else
-    Connection conn(TEST_HOST, TEST_PORT, NULL);
+    Connection conn(TEST_HOST, TEST_PORT, "");
 #endif
 
     int length = conn.llen("list");

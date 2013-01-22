@@ -243,7 +243,6 @@ private:
     StreamBuf streamBuf;
 };
 
-#ifndef REDISPP_ALTBUFFER
 class Buffer
 {
 public:
@@ -289,8 +288,42 @@ public:
         generate(spot, uint_, i);
     }
 
-    template<typename T>
-    void writeArg(T const& a);
+    void writeArg(const char* const& arg)
+    {
+        const size_t len = strlen(arg);
+        checkSpace(len + 1 + 11 + 4);//1 $, 11 for length, 4 for \r\n's
+        writeArgLen(len);
+        memcpy(spot, arg, len);
+        spot += len;
+        *spot++ = '\r';
+        *spot++ = '\n';
+    }
+
+    void writeArg(std::string const& arg)
+    {
+        const size_t len = arg.length();
+        checkSpace(len + 1 + 11 + 4);//1 $, 11 for length, 4 for \r\n's
+        writeArgLen(len);
+        memcpy(spot, &(arg[0]), len);
+        spot += len;
+        *spot++ = '\r';
+        *spot++ = '\n';
+    }
+
+    void writeArg(int const& arg)
+    {
+        namespace qi = boost::spirit::qi;
+        namespace karma = boost::spirit::karma;
+        namespace ascii = boost::spirit::ascii;
+        using karma::int_;
+        using karma::generate;
+
+        char numberBuf[22];
+        char* spot = numberBuf;
+        generate(spot, int_, arg);
+        *spot = 0;
+        writeArg((const char*)numberBuf);
+    }
 
     void mark()
     {
@@ -352,46 +385,6 @@ private:
     char* marked;
 };
 
-template<>
-void Buffer::writeArg<const char*>(const char* const& arg)
-{
-    const size_t len = strlen(arg);
-    checkSpace(len + 1 + 11 + 4);//1 $, 11 for length, 4 for \r\n's
-    writeArgLen(len);
-    memcpy(spot, arg, len);
-    spot += len;
-    *spot++ = '\r';
-    *spot++ = '\n';
-}
-
-template<>
-void Buffer::writeArg<std::string>(std::string const& arg)
-{
-    const size_t len = arg.length();
-    checkSpace(len + 1 + 11 + 4);//1 $, 11 for length, 4 for \r\n's
-    writeArgLen(len);
-    memcpy(spot, &(arg[0]), len);
-    spot += len;
-    *spot++ = '\r';
-    *spot++ = '\n';
-}
-
-template<>
-void Buffer::writeArg<int>(int const& arg)
-{
-    namespace qi = boost::spirit::qi;
-    namespace karma = boost::spirit::karma;
-    namespace ascii = boost::spirit::ascii;
-    using karma::int_;
-    using karma::generate;
-
-    char numberBuf[12];
-    char* spot = numberBuf;
-    generate(spot, int_, arg);
-    *spot = 0;
-    writeArg((const char*)numberBuf);
-}
-
 #define EXECUTE_COMMAND_SYNC(cmd) \
     do {\
         buffer->resetToMark(); \
@@ -419,105 +412,6 @@ void Buffer::writeArg<int>(int const& arg)
         _ ## cmd ## Command.execute(arg1, arg2, arg3, buffer); \
         ioStream->write(buffer->data(), buffer->length()); \
     } while(0)
-
-#else
-
-class Buffer
-{
-public:
-    Buffer(std::iostream& out)
-    : out(out)
-    {}
-
-    void write(char c)
-    {
-        out << c;
-    }
-
-    void write(const char* str)
-    {
-        out << str;
-    }
-
-    void write(const char* str, size_t len)
-    {
-        out << str;
-    }
-
-    void write(const std::string& str)
-    {
-        out << str;
-    }
-
-    void write(size_t i)
-    {
-        out << i;
-    }
-
-    template<typename T>
-    void writeArg(T const& a);
-
-private:
-    void writeArgLen(unsigned int len)
-    {
-        out << '$' << len << "\r\n";
-    }
-
-    std::iostream& out;
-};
-
-template<>
-void Buffer::writeArg<const char*>(const char* const& arg)
-{
-    const size_t len = strlen(arg);
-    writeArgLen(len);
-    out << arg << "\r\n";
-}
-
-template<>
-void Buffer::writeArg<std::string>(std::string const& arg)
-{
-    writeArgLen(arg.length());
-    out << arg << "\r\n";
-}
-
-template<>
-void Buffer::writeArg<int>(int const& arg)
-{
-    namespace qi = boost::spirit::qi;
-    namespace karma = boost::spirit::karma;
-    namespace ascii = boost::spirit::ascii;
-    using karma::int_;
-    using karma::generate;
-
-    char numberBuf[12];
-    char* spot = numberBuf;
-    generate(spot, int_, arg);
-    *spot = 0;
-    writeArg((const char*)numberBuf);
-}
-
-#define EXECUTE_COMMAND_SYNC(cmd) \
-    do {\
-        _ ## cmd ## Command.execute(buffer); \
-    } while(0)
-
-#define EXECUTE_COMMAND_SYNC1(cmd, arg1) \
-    do {\
-        _ ## cmd ## Command.execute(arg1, buffer); \
-    } while(0)
-
-#define EXECUTE_COMMAND_SYNC2(cmd, arg1, arg2) \
-    do {\
-        _ ## cmd ## Command.execute(arg1, arg2, buffer); \
-    } while(0)
-
-#define EXECUTE_COMMAND_SYNC3(cmd, arg1, arg2, arg3) \
-    do {\
-        _ ## cmd ## Command.execute(arg1, arg2, arg3, buffer); \
-    } while(0)
-
-#endif
 
 Command::Command(const char* cmdName, size_t numArgs)
 {
@@ -595,9 +489,6 @@ bool VoidReply::result()
 {
     if(conn)
     {
-#ifdef REDISPP_ALTBUFFER
-        conn->ioStream->flush();
-#endif
         clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
@@ -626,9 +517,6 @@ bool BoolReply::result()
 {
     if(conn)
     {
-#ifdef REDISPP_ALTBUFFER
-        conn->ioStream->flush();
-#endif
         clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
@@ -652,13 +540,10 @@ IntReply::~IntReply()
     {}
 }
 
-int IntReply::result()
+int64_t IntReply::result()
 {
     if(conn)
     {
-#ifdef REDISPP_ALTBUFFER
-        conn->ioStream->flush();
-#endif
         clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
@@ -686,9 +571,6 @@ const std::string& StringReply::result()
 {
     if(conn)
     {
-#ifdef REDISPP_ALTBUFFER
-        conn->ioStream->flush();
-#endif
         clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
@@ -730,9 +612,6 @@ bool MultiBulkEnumerator::next(std::string* out)
     }
     if(!headerDone)
     {
-#ifdef REDISPP_ALTBUFFER
-        conn->ioStream->flush();
-#endif
         clearPendingResults();
         headerDone = true;
         char code = 0;
@@ -760,39 +639,29 @@ bool MultiBulkEnumerator::next(std::string* out)
     return true;
 }
 
-Connection::Connection(const char* host, const char* port, const char* password, bool noDelay)
-: connection(new ClientSocket(host, port)), ioStream(new std::iostream(connection->getStreamBuf())),
-#ifndef REDISPP_ALTBUFFER
-  buffer(new Buffer(100*1024))
-#else
-  buffer(new Buffer(*ioStream))
-#endif
-  , transaction(NULL)
+Connection::Connection(const std::string& host, const std::string& port, const std::string& password, bool noDelay, size_t bufferSize)
+: connection(new ClientSocket(host.c_str(), port.c_str())), ioStream(new std::iostream(connection->getStreamBuf())),
+  buffer(new Buffer(bufferSize)), transaction(NULL)
 {
     if(noDelay)
     {
         connection->tcpNoDelay(true);
     }
 
-    if(password)
+    if(!password.empty())
     {
-        authenticate(password);
+        authenticate(password.c_str());
     }
 }
 
 #ifndef _WIN32
-Connection::Connection(const char* unixDomainSocket, const char* password)
-: connection(new ClientSocket(unixDomainSocket)), ioStream(new std::iostream(connection->getStreamBuf())),
-#ifndef REDISPP_ALTBUFFER
-  buffer(new Buffer(100*1024))
-#else
-  buffer(new Buffer(*ioStream))
-#endif
-  , transaction(NULL)
+Connection::Connection(const std::string& unixDomainSocket, const std::string& password, size_t bufferSize)
+: connection(new ClientSocket(unixDomainSocket.c_str())), ioStream(new std::iostream(connection->getStreamBuf())),
+  buffer(new Buffer(bufferSize)), transaction(NULL)
 {
-    if(password)
+    if(!password.empty())
     {
-        authenticate(password);
+        authenticate(password.c_str());
     }
 }
 #endif
@@ -827,10 +696,10 @@ void Connection::readStatusCodeReply(std::string* out)
     }
 }
 
-int Connection::readIntegerReply()
+int64_t Connection::readIntegerReply()
 {
     char code = 0;
-    int ret = 0;
+    int64_t ret = 0;
     if(!(*ioStream >> code >> ret))
     {
         throw std::runtime_error("error reading integer response");
@@ -1379,7 +1248,7 @@ void QueuedReply::readResult()
     }
     if(state == Committed)
     {
-        const int expectedCount = tmp->readIntegerReply();
+        const int64_t expectedCount = tmp->readIntegerReply();
         if(count != expectedCount)
             throw std::runtime_error("transaction item count did not match");
     }

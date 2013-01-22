@@ -12,9 +12,9 @@ using namespace boost::posix_time;
 void runFunc(const char* arg, size_t count)
 {
 #ifdef UNIX_DOMAIN_SOCKET
-    Connection conn(arg, NULL);
+    Connection conn(arg, "");
 #else
-    Connection conn("localhost", arg, NULL);
+    Connection conn("localhost", arg, "");
 #endif
 
     std::string key = "somemediumkey2";

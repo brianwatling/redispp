@@ -242,7 +242,7 @@ public:
         return *this;
     }
 
-    int result();
+    int64_t result();
 
     operator int()
     {
@@ -258,7 +258,7 @@ protected:
 private:
     IntReply(Connection* conn);
 
-    int storedResult;
+    int64_t storedResult;
 };
 
 class StringReply : public BaseReply
@@ -386,9 +386,11 @@ class Connection
     friend class MultiBulkEnumerator;
     friend class Transaction;
 public:
-    Connection(const char* host, const char* port, const char* password, bool noDelay = false);
+    static const size_t kDefaultBufferSize = 4 * 1024;
+
+    Connection(const std::string& host, const std::string& port, const std::string& password, bool noDelay = false, size_t bufferSize = kDefaultBufferSize);
 #ifndef _WIN32
-    Connection(const char* unixDomainSocket, const char* password);
+    Connection(const std::string& unixDomainSocket, const std::string& password, size_t bufferSize = kDefaultBufferSize);
 #endif
 
     ~Connection();
@@ -498,7 +500,7 @@ public:
 private:
     void readStatusCodeReply(std::string* out);
     std::string readStatusCodeReply();
-    int readIntegerReply();
+    int64_t readIntegerReply();
     void readBulkReply(std::string* out);
     std::string readBulkReply();
 
