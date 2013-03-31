@@ -46,11 +46,24 @@ BOOST_FIXTURE_TEST_SUITE( s, F )
 BOOST_AUTO_TEST_CASE(set_get_exists_del)
 {
     conn.set("hello", "world");
-    BOOST_CHECK((std::string)conn.get("hello") == "world");
+    StringReply stringReply = conn.get("hello");
+    BOOST_CHECK(stringReply.result().is_initialized());
+    BOOST_CHECK_EQUAL((std::string)conn.get("hello"), "world");
     BOOST_CHECK((bool)conn.exists("hello"));
     BOOST_CHECK((bool)conn.del("hello"));
     BOOST_CHECK(!conn.exists("hello"));
     BOOST_CHECK(!conn.del("hello"));
+}
+
+BOOST_AUTO_TEST_CASE(nullreplies)
+{
+	BOOST_CHECK_THROW ((std::string)conn.get("nonexistant"), NullReplyException);
+	StringReply nullReply = conn.get("nonexistant");
+	BOOST_CHECK_EQUAL(false, nullReply.result().is_initialized());
+
+	// Connection still in good state:
+	conn.set("one", "1");
+	BOOST_CHECK_EQUAL((std::string)conn.get("one"), "1");
 }
 
 BOOST_AUTO_TEST_CASE(type)
@@ -315,7 +328,7 @@ BOOST_AUTO_TEST_CASE(pipelined)
             BoolReply b = conn.hset("two", "two", "b");
             VoidReply c = conn.set("three", "c");
         }
-        BOOST_CHECK(readA.result() == "a");
+        BOOST_CHECK((std::string)readA == "a");
     }
 
     BOOST_CHECK((std::string)conn.get("one") == "a");

@@ -20,6 +20,8 @@ void runFunc(const char* arg, size_t count)
     std::string key = "somemediumkey2";
     std::string value = "somemediumvalue";
 
+// Write benchmark
+{
     const size_t chunkFactor = 256;
     VoidReply replies[chunkFactor];
 
@@ -41,16 +43,33 @@ void runFunc(const char* arg, size_t count)
     ptime end(microsec_clock::local_time());
 
     std::cout << count << " writes in " << (end - begin).total_microseconds() << " usecs ~= " << (double)count * 1000000.0/(double)(end - begin).total_microseconds() << " requests per second" << std::endl;
+}
 
-    for(size_t i = 0; i < chunkFactor; ++i)
+// Read benchmark
+{
+    const size_t chunkFactor = 256;
+    StringReply replies[chunkFactor];
+
+    ptime begin(microsec_clock::local_time());
+
+    for(size_t i = 0; i < count; ++i)
     {
-        replies[i].result();
+        const size_t index = i & (chunkFactor - 1);
+        replies[index] = conn.get(key);
+        if(index == (chunkFactor - 1))
+        {
+            for(size_t j = 0; j < chunkFactor; ++j)
+            {
+                replies[j].result();
+            }
+        }
     }
 
-    if((std::string)conn.get("somemediumkey2") != "somemediumvalue")
-    {
-        throw std::runtime_error("somemediumkey2 != somemediumvalue");
-    }
+    ptime end(microsec_clock::local_time());
+
+    std::cout << count << " reads in " << (end - begin).total_microseconds() << " usecs ~= " << (double)count * 1000000.0/(double)(end - begin).total_microseconds() << " requests per second" << std::endl;
+}
+
 }
 
 int main(int argc, char* argv[])

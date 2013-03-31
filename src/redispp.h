@@ -8,9 +8,15 @@
 #include <list>
 #include <boost/intrusive/list.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
 
 namespace redispp
 {
+
+class NullReplyException : std::out_of_range {
+public:
+	NullReplyException();
+};
 
 struct Command
 {
@@ -282,11 +288,15 @@ public:
         return *this;
     }
 
-    const std::string& result();
+    const boost::optional<std::string>& result();
 
     operator std::string()
     {
-        return result();
+    	result();
+        if (!storedResult) {
+        	throw NullReplyException();
+        }
+        return *storedResult;
     }
 
 protected:
@@ -298,7 +308,7 @@ protected:
 private:
     StringReply(Connection* conn);
 
-    std::string storedResult;
+    boost::optional<std::string> storedResult;
 };
 
 class MultiBulkEnumerator : public BaseReply
@@ -332,16 +342,18 @@ public:
         return *this;
     }
 
+    bool nextOptional(boost::optional<std::string> &out);
     bool next(std::string* out);
+
 
 protected:
     virtual void readResult()
     {
         if(conn && (!headerDone || count > 0))
         {
-            std::list<std::string> readPending;
-            std::string tmp;
-            while(next(&tmp))
+            std::list<boost::optional<std::string> > readPending;
+            boost::optional<std::string> tmp;
+            while(nextOptional(tmp))
             {
                 readPending.push_back(tmp);
             }
@@ -353,7 +365,7 @@ protected:
 
     bool headerDone;
     int count;
-    mutable std::list<std::string> pending;
+    mutable std::list<boost::optional<std::string> > pending;
 };
 
 class Connection;
@@ -501,8 +513,8 @@ private:
     void readStatusCodeReply(std::string* out);
     std::string readStatusCodeReply();
     int64_t readIntegerReply();
-    void readBulkReply(std::string* out);
-    std::string readBulkReply();
+    void readBulkReply(boost::optional<std::string> &out);
+    boost::optional<std::string> readBulkReply();
 
     std::auto_ptr<ClientSocket> connection;
     std::auto_ptr<std::iostream> ioStream;
