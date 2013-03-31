@@ -428,6 +428,11 @@ private:
         ioStream->write(buffer->data(), buffer->length()); \
     } while(0)
 
+NullReplyException::NullReplyException()
+: std::out_of_range("Casting null bulk reply to string")
+{
+}
+
 Command::Command(const char* cmdName, size_t numArgs)
 {
     header = "*";
@@ -582,14 +587,14 @@ StringReply::~StringReply()
     {}
 }
 
-const std::string& StringReply::result()
+const boost::optional<std::string>& StringReply::result()
 {
     if(conn)
     {
         clearPendingResults();
         Connection* const tmp = conn;
         conn = NULL;
-        tmp->readBulkReply(&storedResult);
+        tmp->readBulkReply(storedResult);
         unlink();
     }
     return storedResult;
@@ -613,11 +618,11 @@ MultiBulkEnumerator::~MultiBulkEnumerator()
     {}
 }
 
-bool MultiBulkEnumerator::next(std::string* out)
+bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
 {
     if(!pending.empty())
     {
-        *out = pending.front();
+        out = pending.front();
         pending.pop_front();
         return true;
     }
@@ -650,8 +655,22 @@ bool MultiBulkEnumerator::next(std::string* out)
         return false;
     }
     --count;
-    *out = conn->readBulkReply();
+    out = conn->readBulkReply();
     return true;
+}
+
+bool MultiBulkEnumerator::next(std::string *out) {
+	bool result;
+	boost::optional<std::string> optionalOut;
+	result = nextOptional(optionalOut);
+	if (!result) {
+		return result;
+	}
+	if (!optionalOut) {
+		throw NullReplyException();
+	}
+	out->swap(*optionalOut);
+	return result;
 }
 
 Connection::Connection(const std::string& host, const std::string& port, const std::string& password, bool noDelay, size_t bufferSize)
@@ -722,14 +741,14 @@ int64_t Connection::readIntegerReply()
     return ret;
 }
 
-std::string Connection::readBulkReply()
+boost::optional<std::string> Connection::readBulkReply()
 {
-    std::string ret;
-    readBulkReply(&ret);
+	boost::optional<std::string> ret;
+    readBulkReply(ret);
     return ret;
 }
 
-void Connection::readBulkReply(std::string* out)
+void Connection::readBulkReply(boost::optional<std::string> &out)
 {
     char code = 0;
     int count = 0;
@@ -743,10 +762,12 @@ void Connection::readBulkReply(std::string* out)
     }
     if(count < 0)
     {
-        throw std::runtime_error("bulk reply: -1");
+        out = boost::optional<std::string>();
+        return;
     }
     ioStream->get();//'\r'
     ioStream->get();//'\n'
+    out = std::string();
     out->resize(count, '\0');
     ioStream->read((char*)out->c_str(), out->size());
 }
