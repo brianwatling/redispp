@@ -9,6 +9,8 @@
 #include <boost/intrusive/list.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/optional.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 namespace redispp
 {
@@ -18,50 +20,84 @@ public:
 	NullReplyException();
 };
 
+typedef std::list<std::string> ArgList;
+
+template<typename BufferType>
 struct Command
 {
-    Command(const char* cmdName, size_t numArgs);
+    Command(const char* name) : cmdName(std::string(name)), numArgs(0) {}
 
-    virtual ~Command();
+    virtual ~Command() {}
 
-    template<typename BufferType>
-    void execute(BufferType const& dest)
+    std::string header()
     {
-        dest->write(header);
+        std::string header;
+
+        header = "*";
+        header += boost::lexical_cast<std::string>(numArgs + 1);
+        header += "\r\n";
+        header += "$";
+        header += boost::lexical_cast<std::string>(cmdName.length());
+        header += "\r\n";
+        header += cmdName;
+        header += "\r\n";
+
+        return header;
     }
 
-    template<typename T, typename BufferType>
+    void execute(BufferType const& dest)
+    {
+        dest->write(header());
+    }
+
+    template<typename T>
     void execute(T const& arg1, BufferType const& dest)
     {
-        dest->write(header);
+        numArgs = 1;
+        dest->write(header());
         dest->writeArg(arg1);
     }
 
-    template<typename T1, typename T2, typename BufferType>
+    template<typename T1, typename T2>
     void execute(T1 const& arg1, T2 const& arg2, BufferType const& dest)
     {
-        dest->write(header);
+        numArgs = 2;
+        dest->write(header());
         dest->writeArg(arg1);
         dest->writeArg(arg2);
     }
 
-    template<typename T1, typename T2, typename T3, typename BufferType>
+    template<typename T1, typename T2, typename T3>
     void execute(T1 const& arg1, T2 const& arg2, T3 const& arg3, BufferType const& dest)
     {
-        dest->write(header);
+        numArgs = 3;
+        dest->write(header());
         dest->writeArg(arg1);
         dest->writeArg(arg2);
         dest->writeArg(arg3);
     }
 
-    std::string header;
+    void execute(const ArgList& args, const int argn, const BufferType& dest)
+    {
+        numArgs = args.size() + 1;
+        dest->write(header());
+
+        BOOST_FOREACH(std::string arg, args)
+        {
+            dest->writeArg(arg);
+        }
+        dest->writeArg(argn);
+    }
+
+    std::string cmdName;
+    int         numArgs;
 };
 
 #define DEFINE_COMMAND(name, args) \
-    struct name ## Command : public Command \
+    struct name ## Command : public Command< std::auto_ptr<Buffer> > \
     { \
         name ## Command() \
-        : Command(#name, args) \
+        : Command< std::auto_ptr<Buffer> >(#name) \
         {} \
     }; \
     name ## Command _ ## name ## Command;
@@ -464,8 +500,8 @@ public:
     IntReply lrem(const std::string& key, int count, const std::string& value);
     StringReply lpop(const std::string& key);
     StringReply rpop(const std::string& key);
-    //TODO: blpop
-    //TODO: brpop
+    MultiBulkEnumerator blpop(ArgList keys, int timeout);
+    MultiBulkEnumerator brpop(ArgList keys, int timeout);
     StringReply rpopLpush(const std::string& src, const std::string& dest);
 
     BoolReply sadd(const std::string& key, const std::string& member);
@@ -521,7 +557,7 @@ private:
     std::auto_ptr<Buffer> buffer;
     ReplyList outstandingReplies;
     Transaction* transaction;
-    
+
     DEFINE_COMMAND(Quit, 0);
     DEFINE_COMMAND(Auth, 1);
     DEFINE_COMMAND(Exists, 1);
@@ -562,8 +598,8 @@ private:
     DEFINE_COMMAND(LRem, 3);
     DEFINE_COMMAND(LPop, 1);
     DEFINE_COMMAND(RPop, 1);
-    //TODO: blpop
-    //TODO: brpop
+    DEFINE_COMMAND(BLPop, 2);
+    DEFINE_COMMAND(BRPop, 2);
     DEFINE_COMMAND(RPopLPush, 2);
     //TODO: sort
 

@@ -49,7 +49,6 @@ static const char* getLastErrorMessage()
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
-#include <boost/lexical_cast.hpp>
 #include <assert.h>
 
 namespace redispp
@@ -438,22 +437,6 @@ NullReplyException::NullReplyException()
 {
 }
 
-Command::Command(const char* cmdName, size_t numArgs)
-{
-    header = "*";
-    header += boost::lexical_cast<std::string>(numArgs + 1);
-    header += "\r\n";
-    header += "$";
-    header += boost::lexical_cast<std::string>(strlen(cmdName));
-    header += "\r\n";
-    header += cmdName;
-    header += "\r\n";
-}
-
-Command::~Command()
-{
-}
-
 BaseReply::BaseReply(Connection* conn)
 : conn(conn)
 {
@@ -650,7 +633,9 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
         }
         if(count < 0)
         {
-            throw std::runtime_error("multi bulk reply: -1");
+            conn = NULL;
+            unlink();
+            return false;
         }
     }
     if(count <= 0)
@@ -1029,8 +1014,17 @@ StringReply Connection::rpop(const std::string& key)
     return StringReply(this);
 }
 
-//TODO: blpop
-//TODO: brpop
+MultiBulkEnumerator Connection::blpop(ArgList keys, int timeout)
+{
+    EXECUTE_COMMAND_SYNC2(BLPop, keys, timeout);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::brpop(ArgList keys, int timeout)
+{
+    EXECUTE_COMMAND_SYNC2(BRPop, keys, timeout);
+    return MultiBulkEnumerator(this);
+}
 
 StringReply Connection::rpopLpush(const std::string& src, const std::string& dest)
 {
