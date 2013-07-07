@@ -1068,12 +1068,41 @@ BoolReply Connection::sisMember(const std::string& key, const std::string& membe
     return BoolReply(this);
 }
 
-//TODO: sinter
-//TODO: sinterstore
-//TODO: sunion
-//TODO: sunionstore
-//TODO: sdiff
-//TODO: sdiffstore
+MultiBulkEnumerator Connection::sinter(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SInter, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sinterStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SInterStore, key, keys);
+    return IntReply(this);
+}
+
+MultiBulkEnumerator Connection::sunion(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SUnion, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sunionStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SUnionStore, key, keys);
+    return IntReply(this);
+}
+
+MultiBulkEnumerator Connection::sdiff(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SDiff, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sdiffStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SDiffStore, key, keys);
+    return IntReply(this);
+}
 
 MultiBulkEnumerator Connection::smembers(const std::string& key)
 {

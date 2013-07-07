@@ -318,6 +318,35 @@ BOOST_AUTO_TEST_CASE(sets)
     BOOST_CHECK((bool)conn.smove("hello", "hello1", "world"));
     BOOST_CHECK(conn.scard("hello") == 0);
     BOOST_CHECK(conn.scard("hello1") == 1);
+    conn.sadd("set1", "a");
+    conn.sadd("set1", "b");
+    conn.sadd("set2", "b");
+    conn.sadd("set2", "c");
+    result = conn.sinter(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "b");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sinterStore("res",
+                boost::assign::list_of("set1")("set2")) == 1);
+    BOOST_CHECK(conn.scard("res") == 1);
+    result = conn.sunion(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sunionStore("res",
+                boost::assign::list_of("set1")("set2")) == 3);
+    BOOST_CHECK(conn.scard("res") == 3);
+    result = conn.sdiff(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sdiffStore("res",
+                boost::assign::list_of("set1")("set2")) == 1);
+    BOOST_CHECK(conn.scard("res") == 1);
 }
 
 BOOST_AUTO_TEST_CASE(hashes)

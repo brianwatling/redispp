@@ -79,6 +79,17 @@ struct Command
         dest->writeArg(arg3);
     }
 
+    void execute(const ArgList& args, const BufferType& dest)
+    {
+        numArgs = args.size();
+        dest->write(header());
+
+        BOOST_FOREACH(std::string arg, args)
+        {
+            dest->writeArg(arg);
+        }
+    }
+
     void execute(const std::string& arg1, const ArgList& args, const BufferType& dest)
     {
         numArgs = args.size() + 1;
@@ -537,12 +548,12 @@ public:
     BoolReply smove(const std::string& src, const std::string& dest, const std::string& member);
     IntReply scard(const std::string& key);
     BoolReply sisMember(const std::string& key, const std::string& member);
-    //TODO: sinter
-    //TODO: sinterstore
-    //TODO: sunion
-    //TODO: sunionstore
-    //TODO: sdiff
-    //TODO: sdiffstore
+    MultiBulkEnumerator sinter(const ArgList& keys);
+    IntReply sinterStore(const std::string& key, const ArgList& keys);
+    MultiBulkEnumerator sunion(const ArgList& keys);
+    IntReply sunionStore(const std::string& key, const ArgList& keys);
+    MultiBulkEnumerator sdiff(const ArgList& keys);
+    IntReply sdiffStore(const std::string& key, const ArgList& keys);
     MultiBulkEnumerator smembers(const std::string& key);
     StringReply srandMember(const std::string& key);
 
@@ -638,12 +649,12 @@ private:
     DEFINE_COMMAND(SMove, 3);
     DEFINE_COMMAND(SCard, 1);
     DEFINE_COMMAND(SIsMember, 2);
-    //TODO: sinter
-    //TODO: sinterstore
-    //TODO: sunion
-    //TODO: sunionstore
-    //TODO: sdiff
-    //TODO: sdiffstore
+    DEFINE_COMMAND(SInter, 1);
+    DEFINE_COMMAND(SInterStore, 2);
+    DEFINE_COMMAND(SUnion, 1);
+    DEFINE_COMMAND(SUnionStore, 2);
+    DEFINE_COMMAND(SDiff, 1);
+    DEFINE_COMMAND(SDiffStore, 2);
     DEFINE_COMMAND(SMembers, 1);
     DEFINE_COMMAND(SRandMember, 1);
 
