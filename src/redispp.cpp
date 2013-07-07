@@ -621,6 +621,7 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
     if(!headerDone)
     {
         clearPendingResults();
+        conn->readErrorReply();
         headerDone = true;
         char code = 0;
         if(!(*conn->ioStream >> code >> count))
@@ -629,7 +630,7 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
         }
         if(code != '*')
         {
-            throw std::runtime_error(std::string("bad bulk header code: ") + code);
+            throw std::runtime_error(std::string("bad multi-bulk header code: ") + code);
         }
         if(count < 0)
         {
@@ -700,6 +701,32 @@ static inline std::istream& getlineRN(std::istream& is, std::string& str)
     return std::getline(is, str, '\r');
 }
 
+char Connection::statusCode()
+{
+    char code = 0;
+
+    *ioStream >> std::ws;
+    if((code = ioStream->peek()) == EOF)
+    {
+        throw std::runtime_error("No data available on stream");
+    }
+
+    return code;
+}
+
+void Connection::readErrorReply()
+{
+    char code = statusCode();
+
+    if(code == '-')
+    {
+        std::string error;
+        *ioStream >> code;
+        std::getline(*ioStream, error);
+        throw std::runtime_error(std::string("Received Error: ") + error);
+    }
+}
+
 std::string Connection::readStatusCodeReply()
 {
     std::string ret;
@@ -709,6 +736,8 @@ std::string Connection::readStatusCodeReply()
 
 void Connection::readStatusCodeReply(std::string* out)
 {
+    readErrorReply();
+
     char code = 0;
     if(!(*ioStream >> code) || !getlineRN(*ioStream, *out))
     {
@@ -722,6 +751,8 @@ void Connection::readStatusCodeReply(std::string* out)
 
 int64_t Connection::readIntegerReply()
 {
+    readErrorReply();
+
     char code = 0;
     int64_t ret = 0;
     if(!(*ioStream >> code >> ret))
@@ -733,13 +764,15 @@ int64_t Connection::readIntegerReply()
 
 boost::optional<std::string> Connection::readBulkReply()
 {
-	boost::optional<std::string> ret;
+    boost::optional<std::string> ret;
     readBulkReply(ret);
     return ret;
 }
 
 void Connection::readBulkReply(boost::optional<std::string> &out)
 {
+    readErrorReply();
+
     char code = 0;
     int count = 0;
     if(!(*ioStream >> code >> count))
@@ -753,13 +786,15 @@ void Connection::readBulkReply(boost::optional<std::string> &out)
     if(count < 0)
     {
         out = boost::optional<std::string>();
-        return;
     }
-    ioStream->get();//'\r'
-    ioStream->get();//'\n'
-    out = std::string();
-    out->resize(count, '\0');
-    ioStream->read((char*)out->c_str(), out->size());
+    else
+    {
+        ioStream->get();//'\r'
+        ioStream->get();//'\n'
+        out = std::string();
+        out->resize(count, '\0');
+        ioStream->read((char*)out->c_str(), out->size());
+    }
 }
 
 void Connection::quit()

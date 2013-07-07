@@ -586,6 +586,8 @@ public:
     IntReply publish(const std::string& channel, const std::string& message);
 
 private:
+    char statusCode();
+    void readErrorReply();
     void readStatusCodeReply(std::string* out);
     std::string readStatusCodeReply();
     int64_t readIntegerReply();
