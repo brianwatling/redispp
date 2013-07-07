@@ -355,6 +355,15 @@ BOOST_AUTO_TEST_CASE(hashes)
                     ||
                     (str1 == "mars" && str2 == "two" && str3 == "world" && str4 == "one")
                 );
+    KeyValueList fields = boost::assign::list_of
+        (std::make_pair("venus", "three"))
+        (std::make_pair("jupiter", "four"));
+    BOOST_CHECK((bool)conn.hmset("hello", fields));
+    ArgList fieldNames = boost::assign::list_of("venus")("jupiter");
+    result = conn.hmget("hello", fieldNames);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "three" && str2 == "four");
 }
 
 BOOST_AUTO_TEST_CASE(misc)

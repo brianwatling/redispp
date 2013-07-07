@@ -20,7 +20,9 @@ public:
 	NullReplyException();
 };
 
+typedef std::pair<std::string, std::string> KeyValuePair;
 typedef std::list<std::string> ArgList;
+typedef std::list<KeyValuePair> KeyValueList;
 
 template<typename BufferType>
 struct Command
@@ -75,6 +77,31 @@ struct Command
         dest->writeArg(arg1);
         dest->writeArg(arg2);
         dest->writeArg(arg3);
+    }
+
+    void execute(const std::string& arg1, const ArgList& args, const BufferType& dest)
+    {
+        numArgs = args.size() + 1;
+        dest->write(header());
+        dest->writeArg(arg1);
+
+        BOOST_FOREACH(std::string arg, args)
+        {
+            dest->writeArg(arg);
+        }
+    }
+
+    void execute(const std::string& arg1, const KeyValueList& args, const BufferType& dest)
+    {
+        numArgs = args.size() * 2 + 1;
+        dest->write(header());
+        dest->writeArg(arg1);
+
+        BOOST_FOREACH(KeyValuePair arg, args)
+        {
+            dest->writeArg(arg.first);
+            dest->writeArg(arg.second);
+        }
     }
 
     void execute(const ArgList& args, const int argn, const BufferType& dest)
@@ -524,6 +551,8 @@ public:
     BoolReply hset(const std::string& key, const std::string& field, const std::string& value);
     StringReply hget(const std::string& key, const std::string& field);
     BoolReply hsetNX(const std::string& key, const std::string& field, const std::string& value);
+    MultiBulkEnumerator hmget(const std::string& key, const std::list<std::string>& fields);
+    VoidReply hmset(const std::string& key, const std::list< std::pair<std::string, std::string> >& fields);
     IntReply hincrBy(const std::string& key, const std::string& field, int value);
     BoolReply hexists(const std::string& key, const std::string& field);
     BoolReply hdel(const std::string& key, const std::string& field);
@@ -637,8 +666,8 @@ private:
     DEFINE_COMMAND(HSet, 3);
     DEFINE_COMMAND(HSetNX, 3);
     DEFINE_COMMAND(HGet, 2);
-    //TODO: HMGet
-    //TODO: HMSet
+    DEFINE_COMMAND(HMGet, 2);
+    DEFINE_COMMAND(HMSet, 2);
     DEFINE_COMMAND(HIncrBy, 3);
     DEFINE_COMMAND(HExists, 2);
     DEFINE_COMMAND(HDel, 2);

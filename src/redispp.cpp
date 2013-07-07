@@ -1107,6 +1107,18 @@ BoolReply Connection::hsetNX(const std::string& key, const std::string& field, c
     return BoolReply(this);
 }
 
+MultiBulkEnumerator Connection::hmget(const std::string& key, const ArgList& fields)
+{
+    EXECUTE_COMMAND_SYNC2(HMGet, key, fields);
+    return MultiBulkEnumerator(this);
+}
+
+VoidReply Connection::hmset(const std::string& key, const KeyValueList& fields)
+{
+    EXECUTE_COMMAND_SYNC2(HMSet, key, fields);
+    return VoidReply(this);
+}
+
 IntReply Connection::hincrBy(const std::string& key, const std::string& field, int value)
 {
     EXECUTE_COMMAND_SYNC3(HIncrBy, key, field, value);
