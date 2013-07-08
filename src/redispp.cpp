@@ -618,12 +618,13 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
     {
         return false;
     }
+
+    char code = 0;
     if(!headerDone)
     {
         clearPendingResults();
         conn->readErrorReply();
         headerDone = true;
-        char code = 0;
         if(!(*conn->ioStream >> code >> count))
         {
             throw std::runtime_error("error reading bulk response header");
@@ -646,7 +647,22 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
         return false;
     }
     --count;
-    out = conn->readBulkReply();
+    code = conn->statusCode();
+    if(code == '$')
+    {
+        out = conn->readBulkReply();
+    }
+    else if(code == ':')
+    {
+        out = boost::lexical_cast<std::string>(conn->readIntegerReply());
+    }
+    else
+    {
+        throw std::runtime_error(
+                std::string("Unsupported multi-bulk element header code: ") +
+                code);
+    }
+
     return true;
 }
 
@@ -1222,6 +1238,42 @@ MultiBulkEnumerator Connection::hvals(const std::string& key)
 MultiBulkEnumerator Connection::hgetAll(const std::string& key)
 {
     EXECUTE_COMMAND_SYNC1(HGetAll, key);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::scriptExists(const ArgList& scripts)
+{
+    EXECUTE_COMMAND_SYNC2(Script, std::string("exists"), scripts);
+    return MultiBulkEnumerator(this);
+}
+
+VoidReply Connection::scriptFlush()
+{
+    EXECUTE_COMMAND_SYNC1(Script, std::string("flush"));
+    return VoidReply(this);
+}
+
+VoidReply Connection::scriptKill()
+{
+    EXECUTE_COMMAND_SYNC1(Script, std::string("kill"));
+    return VoidReply(this);
+}
+
+StringReply Connection::scriptLoad(const std::string& script)
+{
+    EXECUTE_COMMAND_SYNC2(Script, std::string("load"), script);
+    return StringReply(this);
+}
+
+MultiBulkEnumerator Connection::eval(const std::string& script, const ArgList& keys, const ArgList& args)
+{
+    EXECUTE_COMMAND_SYNC3(Eval, script, keys, args);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::evalSha(const std::string& sha, const ArgList& keys, const ArgList& args)
+{
+    EXECUTE_COMMAND_SYNC3(EvalSha, sha, keys, args);
     return MultiBulkEnumerator(this);
 }
 

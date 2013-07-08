@@ -395,6 +395,56 @@ BOOST_AUTO_TEST_CASE(hashes)
     BOOST_CHECK(str1 == "three" && str2 == "four");
 }
 
+BOOST_AUTO_TEST_CASE(scripts)
+{
+    std::string script = "return {KEYS[1], KEYS[2], false, ARGV[1], ARGV[2]}";
+    BOOST_CHECK(true);
+    std::string sha = conn.scriptLoad(script);
+    BOOST_CHECK(!sha.empty());
+
+    MultiBulkEnumerator result = conn.scriptExists(
+            boost::assign::list_of(sha)("notascript"));
+    std::string str;
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "1");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "0");
+    BOOST_CHECK(!result.next(&str));
+
+    result = conn.evalSha(sha, boost::assign::list_of("a")("b"),
+            boost::assign::list_of("c")("d"));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "a");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "b");
+    BOOST_CHECK_THROW(result.next(&str), NullReplyException);
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "c");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "d");
+    BOOST_CHECK(!result.next(&str));
+
+    conn.scriptFlush();
+    result = conn.scriptExists(boost::assign::list_of(sha));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "0");
+
+    result = conn.eval(script, boost::assign::list_of("a")("b"),
+            boost::assign::list_of("c")("d"));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "a");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "b");
+    BOOST_CHECK_THROW(result.next(&str), NullReplyException);
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "c");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "d");
+    BOOST_CHECK(!result.next(&str));
+
+    conn.scriptKill();
+}
+
 BOOST_AUTO_TEST_CASE(misc)
 {
     time_t now = time(NULL);

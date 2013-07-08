@@ -127,6 +127,24 @@ struct Command
         dest->writeArg(argn);
     }
 
+    void execute(const std::string& arg1, const ArgList& argList1, const ArgList& argList2, const BufferType& dest)
+    {
+        numArgs = argList1.size() + argList2.size() + 2;
+        dest->write(header());
+        dest->writeArg(arg1);
+        dest->writeArg(argList1.size());
+
+        BOOST_FOREACH(std::string arg, argList1)
+        {
+            dest->writeArg(arg);
+        }
+
+        BOOST_FOREACH(std::string arg, argList2)
+        {
+            dest->writeArg(arg);
+        }
+    }
+
     std::string cmdName;
     int         numArgs;
 };
@@ -572,6 +590,14 @@ public:
     MultiBulkEnumerator hvals(const std::string& key);
     MultiBulkEnumerator hgetAll(const std::string& key);
 
+    MultiBulkEnumerator scriptExists(const ArgList& script);
+    VoidReply scriptFlush();
+    VoidReply scriptKill();
+    StringReply scriptLoad(const std::string& script);
+
+    MultiBulkEnumerator eval(const std::string& script, const ArgList& keys, const ArgList& args);
+    MultiBulkEnumerator evalSha(const std::string& sha, const ArgList& keys, const ArgList& args);
+
     VoidReply save();
     VoidReply bgSave();
     VoidReply bgReWriteAOF();
@@ -688,6 +714,10 @@ private:
     DEFINE_COMMAND(HKeys, 1);
     DEFINE_COMMAND(HVals, 1);
     DEFINE_COMMAND(HGetAll, 1);
+
+    DEFINE_COMMAND(Script, 2);
+    DEFINE_COMMAND(Eval, 3);
+    DEFINE_COMMAND(EvalSha, 3);
 
     DEFINE_COMMAND(Save, 0);
     DEFINE_COMMAND(BgSave, 0);
