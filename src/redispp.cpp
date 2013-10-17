@@ -627,10 +627,14 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
         headerDone = true;
         if(!(*conn->ioStream >> code >> count))
         {
+            conn = NULL;
+            unlink();
             throw std::runtime_error("error reading bulk response header");
         }
         if(code != '*')
         {
+            conn = NULL;
+            unlink();
             throw std::runtime_error(std::string("bad multi-bulk header code: ") + code);
         }
         if(count < 0)
@@ -658,6 +662,8 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
     }
     else
     {
+        conn = NULL;
+        unlink();
         throw std::runtime_error(
                 std::string("Unsupported multi-bulk element header code: ") +
                 code);
