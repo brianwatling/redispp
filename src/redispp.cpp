@@ -15,7 +15,7 @@ int close(SOCKET sock)
 static bool setSocketFlag(SOCKET sock, int level, int optname, bool value)
 {
     BOOL val = value ? TRUE : FALSE;
-    return 0 == setsockopt(sock, level, optname, (char*)&val, sizeof(value));
+    return 0 == setsockopt(sock, level, optname, (char*)&val, sizeof(val));
 }
 
 static const char* getLastErrorMessage()
@@ -36,7 +36,7 @@ typedef void* RecvBufferType;
 static bool setSocketFlag(SOCKET sock, int level, int optname, bool value)
 {
     int val = value ? 1 : 0;
-    return 0 == setsockopt(sock, level, optname, &val, sizeof(value));
+    return 0 == setsockopt(sock, level, optname, &val, sizeof(val));
 }
 
 static const char* getLastErrorMessage()
