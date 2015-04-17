@@ -264,6 +264,11 @@ public:
     Buffer(size_t bufferSize)
     : buffer(new char[bufferSize]), spot(buffer), end(buffer + bufferSize), marked(buffer)
     {}
+    
+    ~Buffer()
+    {
+    	delete[] buffer;
+    }
 
     void write(char c)
     {
