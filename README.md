@@ -139,7 +139,7 @@ The client has basic support for transactions. It currently can open a MULTI and
 
 ## License
 
-Public domain. Credit is appreciated and I would like to hear about how you use it.
+See [LICENSE.md](LICENSE.md). Credit is appreciated (but not required), and I would like to hear about how you use it (but again, not required).
 
 ## Contributors
 
