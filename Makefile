@@ -1,6 +1,6 @@
 all: libredispp.a libredispp.so unittests perftest multitest transtest
 
-CXXFLAGS ?= -g -O0 -Isrc $(EXTRA_CXXFLAGS) -Werror
+CXXFLAGS ?= -std=c++98 -g -O0 -Isrc $(EXTRA_CXXFLAGS) -Werror
 
 VPATH += src test
 
