@@ -2,6 +2,9 @@ language: cpp
 os: linux
 dist: trusty
 script: make unittests && ./unittests 
+apt:
+  packages:
+    - libboost-test1.55-dev
 sudo: required
 services:
   - docker
