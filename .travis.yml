@@ -1,0 +1,26 @@
+language: cpp
+os: linux
+dist: trusty
+script: make unittests && ./unittests 
+sudo: required
+services:
+  - docker
+before_install:
+  - docker pull redis
+  - docker run -p 127.0.0.1:6379:6379 -d redis
+matrix:
+  include:
+    - compiler:
+      - g++
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      before_install:
+        - eval "${MATRIX_EVAL}"
+    - compiler:
+      - clang
