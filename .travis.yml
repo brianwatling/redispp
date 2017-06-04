@@ -2,10 +2,6 @@ language: cpp
 os: linux
 dist: trusty
 script: make unittests && ./unittests 
-addons:
-  apt:
-    packages:
-      - libboost-test1.55-dev
 sudo: required
 services:
   - docker
@@ -22,9 +18,14 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-6
+            - libboost-test1.55-dev
       env:
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       before_install:
         - eval "${MATRIX_EVAL}"
     - compiler:
       - clang
+      addons:
+        apt:
+          packages:
+            - libboost-test1.55-dev
