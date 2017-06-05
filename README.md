@@ -1,4 +1,4 @@
-# Another C++ client for Redis [![Build Status](https://img.shields.io/travis/kevinkjt2000/redispp/master.svg?style=flat-square&label=Travis)](https://travis-ci.org/kevinkjt2000/redispp)
+# Another C++ client for Redis [![Build Status](https://img.shields.io/travis/brianwatling/redispp/master.svg?style=flat-square&label=Travis)](https://travis-ci.org/brianwatling/redispp)
 
 - Supports pipelining, using the same functions as synchronous requests
 - The included performance test runs about 5 times faster with pipelining than with synchronous requests (single client/thread, on my laptop, to localhost)
