@@ -2,6 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <redispp.h>
 #include <time.h>
+#include <boost/assign/list_of.hpp>
 #ifdef _WIN32
 #include <windows.h>
 void sleep(size_t seconds)
@@ -64,6 +65,15 @@ BOOST_AUTO_TEST_CASE(nullreplies)
 	// Connection still in good state:
 	conn.set("one", "1");
 	BOOST_CHECK_EQUAL((std::string)conn.get("one"), "1");
+
+    MultiBulkEnumerator result = conn.blpop(
+            boost::assign::list_of("notalist"), 1);
+    std::string str;
+    BOOST_CHECK(!result.next(&str));
+
+	// Connection still in good state:
+	BOOST_CHECK_EQUAL((std::string)conn.get("one"), "1");
+
 }
 
 BOOST_AUTO_TEST_CASE(type)
@@ -210,19 +220,19 @@ BOOST_AUTO_TEST_CASE(lists)
     BOOST_CHECK(conn.rpush("hello", "a") == 4);
     BOOST_CHECK(conn.llen("hello") == 4);
     MultiBulkEnumerator result = conn.lrange("hello", 1, 3);
-    std::string str;
-    BOOST_CHECK(result.next(&str));
-    BOOST_CHECK(str == "c");
-    BOOST_CHECK(result.next(&str));
-    BOOST_CHECK(str == "b");
-    BOOST_CHECK(result.next(&str));
-    BOOST_CHECK(str == "a");
+    std::string str1;
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "b");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a");
     conn.ltrim("hello", 0, 1);
     result = conn.lrange("hello", 0, 10);
-    BOOST_CHECK(result.next(&str));
-    BOOST_CHECK(str == "d");
-    BOOST_CHECK(result.next(&str));
-    BOOST_CHECK(str == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "d");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "c");
     BOOST_CHECK((std::string)conn.lindex("hello", 0) == "d");
     BOOST_CHECK((std::string)conn.lindex("hello", 1) == "c");
     conn.lset("hello", 1, "f");
@@ -238,6 +248,47 @@ BOOST_AUTO_TEST_CASE(lists)
     BOOST_CHECK((std::string)conn.rpop("hello") == "x");
     conn.rpush("hello", "z");
     BOOST_CHECK((std::string)conn.rpopLpush("hello", "hello") == "z");
+    conn.lpush("list1", "a");
+    conn.lpush("list1", "b");
+    conn.lpush("list2", "c");
+    result = conn.blpop(boost::assign::list_of("list1")("list2"), 0);
+    std::string str2;
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list1");
+    BOOST_CHECK(str2 == "b");
+    result = conn.blpop(boost::assign::list_of("list1")("list2"), 0);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list1");
+    BOOST_CHECK(str2 == "a");
+    result = conn.blpop(boost::assign::list_of("list1")("list2"), 0);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list2");
+    BOOST_CHECK(str2 == "c");
+    result = conn.blpop(boost::assign::list_of("list1")("list2"), 1);
+	BOOST_CHECK(!result.next(&str1));
+    conn.lpush("list1", "a");
+    conn.lpush("list1", "b");
+    conn.lpush("list2", "c");
+    result = conn.brpop(boost::assign::list_of("list1")("list2"), 0);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list1");
+    BOOST_CHECK(str2 == "a");
+    result = conn.brpop(boost::assign::list_of("list1")("list2"), 0);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list1");
+    BOOST_CHECK(str2 == "b");
+    result = conn.brpop(boost::assign::list_of("list1")("list2"), 0);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "list2");
+    BOOST_CHECK(str2 == "c");
+    result = conn.brpop(boost::assign::list_of("list1")("list2"), 1);
+	BOOST_CHECK(!result.next(&str1));
 }
 
 BOOST_AUTO_TEST_CASE(sets)
@@ -267,6 +318,35 @@ BOOST_AUTO_TEST_CASE(sets)
     BOOST_CHECK((bool)conn.smove("hello", "hello1", "world"));
     BOOST_CHECK(conn.scard("hello") == 0);
     BOOST_CHECK(conn.scard("hello1") == 1);
+    conn.sadd("set1", "a");
+    conn.sadd("set1", "b");
+    conn.sadd("set2", "b");
+    conn.sadd("set2", "c");
+    result = conn.sinter(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "b");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sinterStore("res",
+                boost::assign::list_of("set1")("set2")) == 1);
+    BOOST_CHECK(conn.scard("res") == 1);
+    result = conn.sunion(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a" || str1 == "b" || str1 == "c");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sunionStore("res",
+                boost::assign::list_of("set1")("set2")) == 3);
+    BOOST_CHECK(conn.scard("res") == 3);
+    result = conn.sdiff(boost::assign::list_of("set1")("set2"));
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(str1 == "a");
+    BOOST_CHECK(!result.next(&str2));
+    BOOST_CHECK(conn.sdiffStore("res",
+                boost::assign::list_of("set1")("set2")) == 1);
+    BOOST_CHECK(conn.scard("res") == 1);
 }
 
 BOOST_AUTO_TEST_CASE(hashes)
@@ -304,6 +384,65 @@ BOOST_AUTO_TEST_CASE(hashes)
                     ||
                     (str1 == "mars" && str2 == "two" && str3 == "world" && str4 == "one")
                 );
+    KeyValueList fields = boost::assign::list_of
+        (std::make_pair("venus", "three"))
+        (std::make_pair("jupiter", "four"));
+    BOOST_CHECK((bool)conn.hmset("hello", fields));
+    ArgList fieldNames = boost::assign::list_of("venus")("jupiter");
+    result = conn.hmget("hello", fieldNames);
+    BOOST_CHECK(result.next(&str1));
+    BOOST_CHECK(result.next(&str2));
+    BOOST_CHECK(str1 == "three" && str2 == "four");
+}
+
+BOOST_AUTO_TEST_CASE(scripts)
+{
+    std::string script = "return {KEYS[1], KEYS[2], false, ARGV[1], ARGV[2]}";
+    BOOST_CHECK(true);
+    std::string sha = conn.scriptLoad(script);
+    BOOST_CHECK(!sha.empty());
+
+    MultiBulkEnumerator result = conn.scriptExists(
+            boost::assign::list_of(sha)("notascript"));
+    std::string str;
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "1");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "0");
+    BOOST_CHECK(!result.next(&str));
+
+    result = conn.evalSha(sha, boost::assign::list_of("a")("b"),
+            boost::assign::list_of("c")("d"));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "a");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "b");
+    BOOST_CHECK_THROW(result.next(&str), NullReplyException);
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "c");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "d");
+    BOOST_CHECK(!result.next(&str));
+
+    conn.scriptFlush();
+    result = conn.scriptExists(boost::assign::list_of(sha));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "0");
+
+    result = conn.eval(script, boost::assign::list_of("a")("b"),
+            boost::assign::list_of("c")("d"));
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "a");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "b");
+    BOOST_CHECK_THROW(result.next(&str), NullReplyException);
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "c");
+    BOOST_CHECK(result.next(&str));
+    BOOST_CHECK(str == "d");
+    BOOST_CHECK(!result.next(&str));
+
+    conn.scriptKill();
 }
 
 BOOST_AUTO_TEST_CASE(misc)
