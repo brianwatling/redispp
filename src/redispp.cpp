@@ -49,7 +49,6 @@ static const char* getLastErrorMessage()
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
-#include <boost/lexical_cast.hpp>
 #include <assert.h>
 
 namespace redispp
@@ -438,22 +437,6 @@ NullReplyException::NullReplyException()
 {
 }
 
-Command::Command(const char* cmdName, size_t numArgs)
-{
-    header = "*";
-    header += boost::lexical_cast<std::string>(numArgs + 1);
-    header += "\r\n";
-    header += "$";
-    header += boost::lexical_cast<std::string>(strlen(cmdName));
-    header += "\r\n";
-    header += cmdName;
-    header += "\r\n";
-}
-
-Command::~Command()
-{
-}
-
 BaseReply::BaseReply(Connection* conn)
 : conn(conn)
 {
@@ -635,22 +618,30 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
     {
         return false;
     }
+
+    char code = 0;
     if(!headerDone)
     {
         clearPendingResults();
+        conn->readErrorReply();
         headerDone = true;
-        char code = 0;
         if(!(*conn->ioStream >> code >> count))
         {
+            conn = NULL;
+            unlink();
             throw std::runtime_error("error reading bulk response header");
         }
         if(code != '*')
         {
-            throw std::runtime_error(std::string("bad bulk header code: ") + code);
+            conn = NULL;
+            unlink();
+            throw std::runtime_error(std::string("bad multi-bulk header code: ") + code);
         }
         if(count < 0)
         {
-            throw std::runtime_error("multi bulk reply: -1");
+            conn = NULL;
+            unlink();
+            return false;
         }
     }
     if(count <= 0)
@@ -660,7 +651,24 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out)
         return false;
     }
     --count;
-    out = conn->readBulkReply();
+    code = conn->statusCode();
+    if(code == '$')
+    {
+        out = conn->readBulkReply();
+    }
+    else if(code == ':')
+    {
+        out = boost::lexical_cast<std::string>(conn->readIntegerReply());
+    }
+    else
+    {
+        conn = NULL;
+        unlink();
+        throw std::runtime_error(
+                std::string("Unsupported multi-bulk element header code: ") +
+                code);
+    }
+
     return true;
 }
 
@@ -715,6 +723,32 @@ static inline std::istream& getlineRN(std::istream& is, std::string& str)
     return std::getline(is, str, '\r');
 }
 
+char Connection::statusCode()
+{
+    char code = 0;
+
+    *ioStream >> std::ws;
+    if((code = ioStream->peek()) == EOF)
+    {
+        throw std::runtime_error("No data available on stream");
+    }
+
+    return code;
+}
+
+void Connection::readErrorReply()
+{
+    char code = statusCode();
+
+    if(code == '-')
+    {
+        std::string error;
+        *ioStream >> code;
+        std::getline(*ioStream, error);
+        throw std::runtime_error(std::string("Received Error: ") + error);
+    }
+}
+
 std::string Connection::readStatusCodeReply()
 {
     std::string ret;
@@ -724,6 +758,8 @@ std::string Connection::readStatusCodeReply()
 
 void Connection::readStatusCodeReply(std::string* out)
 {
+    readErrorReply();
+
     char code = 0;
     if(!(*ioStream >> code) || !getlineRN(*ioStream, *out))
     {
@@ -737,6 +773,8 @@ void Connection::readStatusCodeReply(std::string* out)
 
 int64_t Connection::readIntegerReply()
 {
+    readErrorReply();
+
     char code = 0;
     int64_t ret = 0;
     if(!(*ioStream >> code >> ret))
@@ -748,13 +786,15 @@ int64_t Connection::readIntegerReply()
 
 boost::optional<std::string> Connection::readBulkReply()
 {
-	boost::optional<std::string> ret;
+    boost::optional<std::string> ret;
     readBulkReply(ret);
     return ret;
 }
 
 void Connection::readBulkReply(boost::optional<std::string> &out)
 {
+    readErrorReply();
+
     char code = 0;
     int count = 0;
     if(!(*ioStream >> code >> count))
@@ -768,13 +808,15 @@ void Connection::readBulkReply(boost::optional<std::string> &out)
     if(count < 0)
     {
         out = boost::optional<std::string>();
-        return;
     }
-    ioStream->get();//'\r'
-    ioStream->get();//'\n'
-    out = std::string();
-    out->resize(count, '\0');
-    ioStream->read((char*)out->c_str(), out->size());
+    else
+    {
+        ioStream->get();//'\r'
+        ioStream->get();//'\n'
+        out = std::string();
+        out->resize(count, '\0');
+        ioStream->read((char*)out->c_str(), out->size());
+    }
 }
 
 void Connection::quit()
@@ -1029,8 +1071,17 @@ StringReply Connection::rpop(const std::string& key)
     return StringReply(this);
 }
 
-//TODO: blpop
-//TODO: brpop
+MultiBulkEnumerator Connection::blpop(ArgList keys, int timeout)
+{
+    EXECUTE_COMMAND_SYNC2(BLPop, keys, timeout);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::brpop(ArgList keys, int timeout)
+{
+    EXECUTE_COMMAND_SYNC2(BRPop, keys, timeout);
+    return MultiBulkEnumerator(this);
+}
 
 StringReply Connection::rpopLpush(const std::string& src, const std::string& dest)
 {
@@ -1074,12 +1125,41 @@ BoolReply Connection::sisMember(const std::string& key, const std::string& membe
     return BoolReply(this);
 }
 
-//TODO: sinter
-//TODO: sinterstore
-//TODO: sunion
-//TODO: sunionstore
-//TODO: sdiff
-//TODO: sdiffstore
+MultiBulkEnumerator Connection::sinter(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SInter, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sinterStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SInterStore, key, keys);
+    return IntReply(this);
+}
+
+MultiBulkEnumerator Connection::sunion(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SUnion, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sunionStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SUnionStore, key, keys);
+    return IntReply(this);
+}
+
+MultiBulkEnumerator Connection::sdiff(const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC1(SDiff, keys);
+    return MultiBulkEnumerator(this);
+}
+
+IntReply Connection::sdiffStore(const std::string& key, const ArgList& keys)
+{
+    EXECUTE_COMMAND_SYNC2(SDiffStore, key, keys);
+    return IntReply(this);
+}
 
 MultiBulkEnumerator Connection::smembers(const std::string& key)
 {
@@ -1111,6 +1191,18 @@ BoolReply Connection::hsetNX(const std::string& key, const std::string& field, c
 {
     EXECUTE_COMMAND_SYNC3(HSetNX, key, field, value);
     return BoolReply(this);
+}
+
+MultiBulkEnumerator Connection::hmget(const std::string& key, const ArgList& fields)
+{
+    EXECUTE_COMMAND_SYNC2(HMGet, key, fields);
+    return MultiBulkEnumerator(this);
+}
+
+VoidReply Connection::hmset(const std::string& key, const KeyValueList& fields)
+{
+    EXECUTE_COMMAND_SYNC2(HMSet, key, fields);
+    return VoidReply(this);
 }
 
 IntReply Connection::hincrBy(const std::string& key, const std::string& field, int value)
@@ -1152,6 +1244,42 @@ MultiBulkEnumerator Connection::hvals(const std::string& key)
 MultiBulkEnumerator Connection::hgetAll(const std::string& key)
 {
     EXECUTE_COMMAND_SYNC1(HGetAll, key);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::scriptExists(const ArgList& scripts)
+{
+    EXECUTE_COMMAND_SYNC2(Script, std::string("exists"), scripts);
+    return MultiBulkEnumerator(this);
+}
+
+VoidReply Connection::scriptFlush()
+{
+    EXECUTE_COMMAND_SYNC1(Script, std::string("flush"));
+    return VoidReply(this);
+}
+
+VoidReply Connection::scriptKill()
+{
+    EXECUTE_COMMAND_SYNC1(Script, std::string("kill"));
+    return VoidReply(this);
+}
+
+StringReply Connection::scriptLoad(const std::string& script)
+{
+    EXECUTE_COMMAND_SYNC2(Script, std::string("load"), script);
+    return StringReply(this);
+}
+
+MultiBulkEnumerator Connection::eval(const std::string& script, const ArgList& keys, const ArgList& args)
+{
+    EXECUTE_COMMAND_SYNC3(Eval, script, keys, args);
+    return MultiBulkEnumerator(this);
+}
+
+MultiBulkEnumerator Connection::evalSha(const std::string& sha, const ArgList& keys, const ArgList& args)
+{
+    EXECUTE_COMMAND_SYNC3(EvalSha, sha, keys, args);
     return MultiBulkEnumerator(this);
 }
 
