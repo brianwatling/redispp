@@ -122,8 +122,8 @@ template <typename BufferType> struct Command {
 };
 
 #define DEFINE_COMMAND(name, args)                                             \
-  struct name##Command : public Command<std::auto_ptr<Buffer>> {               \
-    name##Command() : Command<std::auto_ptr<Buffer>>(#name) {}                 \
+  struct name##Command : public Command<std::unique_ptr<Buffer>> {               \
+    name##Command() : Command<std::unique_ptr<Buffer>>(#name) {}                 \
   };                                                                           \
   name##Command _##name##Command;
 
@@ -549,9 +549,9 @@ private:
   void readBulkReply(boost::optional<std::string> &out);
   boost::optional<std::string> readBulkReply();
 
-  std::auto_ptr<ClientSocket> connection;
-  std::auto_ptr<std::iostream> ioStream;
-  std::auto_ptr<Buffer> buffer;
+  std::unique_ptr<ClientSocket> connection;
+  std::unique_ptr<std::iostream> ioStream;
+  std::unique_ptr<Buffer> buffer;
   ReplyList outstandingReplies;
   Transaction *transaction;
 
