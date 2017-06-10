@@ -9,7 +9,7 @@
 using namespace redispp;
 using namespace boost::posix_time;
 
-void runFunc(const char* arg, size_t count) {
+void runFunc(const char *arg, size_t count) {
 #ifdef UNIX_DOMAIN_SOCKET
   Connection conn(arg, "");
 #else
@@ -72,7 +72,7 @@ void runFunc(const char* arg, size_t count) {
   }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 #ifdef _WIN32
   WSADATA wsaData;
   WORD version;

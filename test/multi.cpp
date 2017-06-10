@@ -8,11 +8,11 @@
 using namespace redispp;
 using namespace std;
 
-const char* TEST_PORT = "0";
-const char* TEST_HOST = "127.0.0.1";
-const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
+const char *TEST_PORT = "0";
+const char *TEST_HOST = "127.0.0.1";
+const char *TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 #ifdef _WIN32
   WSADATA wsaData;
   WORD version;

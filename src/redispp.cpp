@@ -5,16 +5,16 @@
 #include <ws2tcpip.h>
 
 typedef int ssize_t;
-typedef char* RecvBufferType;
+typedef char *RecvBufferType;
 
 int close(SOCKET sock) { return closesocket(sock); }
 
 static bool setSocketFlag(SOCKET sock, int level, int optname, bool value) {
   BOOL val = value ? TRUE : FALSE;
-  return 0 == setsockopt(sock, level, optname, (char*)&val, sizeof(val));
+  return 0 == setsockopt(sock, level, optname, (char *)&val, sizeof(val));
 }
 
-static const char* getLastErrorMessage() {
+static const char *getLastErrorMessage() {
   return gai_strerror(WSAGetLastError());
 }
 
@@ -26,14 +26,14 @@ static const char* getLastErrorMessage() {
 #include <sys/un.h>
 
 typedef int SOCKET;
-typedef void* RecvBufferType;
+typedef void *RecvBufferType;
 
 static bool setSocketFlag(SOCKET sock, int level, int optname, bool value) {
   int val = value ? 1 : 0;
   return 0 == setsockopt(sock, level, optname, &val, sizeof(val));
 }
 
-static const char* getLastErrorMessage() { return strerror(errno); }
+static const char *getLastErrorMessage() { return strerror(errno); }
 
 #endif
 #include <assert.h>
@@ -46,10 +46,10 @@ namespace redispp {
 
 class ClientSocket : boost::noncopyable {
 public:
-  ClientSocket(const char* host, const char* port)
+  ClientSocket(const char *host, const char *port)
       : sockFd(-1), streamBuf(this) {
     struct addrinfo hints;
-    struct addrinfo* res = NULL;
+    struct addrinfo *res = NULL;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC; // use IPv4 or IPv6, whichever
@@ -82,7 +82,7 @@ public:
   }
 
 #ifndef _WIN32
-  ClientSocket(const char* unixDomainSocket) : sockFd(-1), streamBuf(this) {
+  ClientSocket(const char *unixDomainSocket) : sockFd(-1), streamBuf(this) {
     struct sockaddr_un sockaddr;
     sockaddr.sun_family = AF_UNIX;
     strncpy(sockaddr.sun_path, unixDomainSocket, sizeof(sockaddr.sun_path));
@@ -97,7 +97,7 @@ public:
     setSocketFlag(sockFd, SOL_SOCKET, SO_REUSEADDR, true);
     setSocketFlag(sockFd, SOL_SOCKET, SO_KEEPALIVE, true);
 
-    if (connect(sockFd, (const struct sockaddr*)&sockaddr, sizeof(sockaddr))) {
+    if (connect(sockFd, (const struct sockaddr *)&sockaddr, sizeof(sockaddr))) {
       close(sockFd);
       throw std::runtime_error(std::string("error connecting to ") +
                                unixDomainSocket + "(" + getLastErrorMessage() +
@@ -114,11 +114,11 @@ public:
     }
   }
 
-  void write(const void* data, size_t len) {
+  void write(const void *data, size_t len) {
     size_t sent = 0;
     while (sent < len) {
       const ssize_t ret =
-          ::send(sockFd, (const char*)data + sent, len - sent, 0);
+          ::send(sockFd, (const char *)data + sent, len - sent, 0);
       if (ret <= 0) {
         throw std::runtime_error(std::string("error writing to socket: ") +
                                  getLastErrorMessage());
@@ -127,7 +127,7 @@ public:
     }
   }
 
-  size_t read(void* data, size_t len) {
+  size_t read(void *data, size_t len) {
     const ssize_t ret = ::recv(sockFd, (RecvBufferType)data, len, 0);
     if (ret <= 0) {
       throw std::runtime_error(std::string("error reading from socket: ") +
@@ -142,11 +142,11 @@ public:
     }
   }
 
-  std::streambuf* getStreamBuf() { return &streamBuf; }
+  std::streambuf *getStreamBuf() { return &streamBuf; }
 
   class StreamBuf : public std::streambuf {
   public:
-    StreamBuf(ClientSocket* conn) : conn(conn) {
+    StreamBuf(ClientSocket *conn) : conn(conn) {
       setp(outBuffer, outBuffer + sizeof(outBuffer) - 1);
     }
 
@@ -158,7 +158,7 @@ public:
       return sync() == 0 ? traits_type::not_eof(c) : traits_type::eof();
     }
 
-    std::streamsize xsputn(const char* buf, std::streamsize size) {
+    std::streamsize xsputn(const char *buf, std::streamsize size) {
       sync();
       conn->write(buf, size);
       return size;
@@ -178,16 +178,16 @@ public:
       return traits_type::to_int_type(*gptr());
     }
 
-    std::streamsize xsgetn(char* dest, std::streamsize size) {
+    std::streamsize xsgetn(char *dest, std::streamsize size) {
       std::streamsize numRead = 0;
       while (numRead < size) {
-        char* const beg = gptr();
-        char* const end = egptr();
+        char *const beg = gptr();
+        char *const end = egptr();
         if (beg < end) {
           const std::streamsize avail = end - beg;
           const std::streamsize toRead =
               std::min<std::streamsize>(size - numRead, avail);
-          char* const newBeg = beg + toRead;
+          char *const newBeg = beg + toRead;
           std::copy(beg, newBeg, dest + numRead);
           numRead += toRead;
           if (newBeg != end) {
@@ -213,7 +213,7 @@ public:
   private:
     char outBuffer[1400];
     char inBuffer[1400];
-    ClientSocket* conn;
+    ClientSocket *conn;
   };
 
 private:
@@ -235,20 +235,20 @@ public:
     ++spot;
   }
 
-  void write(const char* str) {
+  void write(const char *str) {
     const size_t len = strlen(str);
     checkSpace(len);
     memcpy(spot, str, len);
     spot += len;
   }
 
-  void write(const char* str, size_t len) {
+  void write(const char *str, size_t len) {
     checkSpace(len);
     memcpy(spot, str, len);
     spot += len;
   }
 
-  void write(const std::string& str) { write(str.c_str(), str.size()); }
+  void write(const std::string &str) { write(str.c_str(), str.size()); }
 
   void write(size_t i) {
     namespace qi = boost::spirit::qi;
@@ -260,7 +260,7 @@ public:
     generate(spot, uint_, i);
   }
 
-  void writeArg(const char* const& arg) {
+  void writeArg(const char *const &arg) {
     const size_t len = strlen(arg);
     checkSpace(len + 1 + 11 + 4); // 1 $, 11 for length, 4 for \r\n's
     writeArgLen(len);
@@ -270,7 +270,7 @@ public:
     *spot++ = '\n';
   }
 
-  void writeArg(std::string const& arg) {
+  void writeArg(std::string const &arg) {
     const size_t len = arg.length();
     checkSpace(len + 1 + 11 + 4); // 1 $, 11 for length, 4 for \r\n's
     writeArgLen(len);
@@ -280,7 +280,7 @@ public:
     *spot++ = '\n';
   }
 
-  void writeArg(int64_t const& arg) {
+  void writeArg(int64_t const &arg) {
     namespace qi = boost::spirit::qi;
     namespace karma = boost::spirit::karma;
     namespace ascii = boost::spirit::ascii;
@@ -288,10 +288,10 @@ public:
     using karma::generate;
 
     char numberBuf[22];
-    char* spot = numberBuf;
+    char *spot = numberBuf;
     generate(spot, int_, arg);
     *spot = 0;
-    writeArg((const char*)numberBuf);
+    writeArg((const char *)numberBuf);
   }
 
   void mark() { marked = spot; }
@@ -311,9 +311,9 @@ public:
 
   size_t length() const { return spot - buffer; }
 
-  char* data() { return buffer; }
+  char *data() { return buffer; }
 
-  const char* data() const { return buffer; }
+  const char *data() const { return buffer; }
 
 private:
   void writeArgLen(unsigned int len) {
@@ -329,10 +329,10 @@ private:
     *spot++ = '\n';
   }
 
-  char* buffer;
-  char* spot;
-  char* end;
-  char* marked;
+  char *buffer;
+  char *spot;
+  char *end;
+  char *marked;
 };
 
 #define EXECUTE_COMMAND_SYNC(cmd)                                              \
@@ -366,29 +366,29 @@ private:
 NullReplyException::NullReplyException()
     : std::out_of_range("Casting null bulk reply to string") {}
 
-BaseReply::BaseReply(Connection* conn) : conn(conn) {
+BaseReply::BaseReply(Connection *conn) : conn(conn) {
   conn->outstandingReplies.push_back(*this);
   if (conn->transaction) {
     conn->transaction->replies.count += 1;
   }
 }
 
-BaseReply::BaseReply(const BaseReply& other) : conn(other.conn) {
+BaseReply::BaseReply(const BaseReply &other) : conn(other.conn) {
   other.conn = NULL;
   if (conn)
     conn->outstandingReplies.insert(conn->outstandingReplies.iterator_to(other),
                                     *this);
-  const_cast<BaseReply&>(other).unlink();
+  const_cast<BaseReply &>(other).unlink();
 }
 
-BaseReply& BaseReply::operator=(const BaseReply& other) {
+BaseReply &BaseReply::operator=(const BaseReply &other) {
   unlink();
   conn = other.conn;
   if (conn)
     conn->outstandingReplies.insert(conn->outstandingReplies.iterator_to(other),
                                     *this);
   other.conn = NULL;
-  const_cast<BaseReply&>(other).unlink();
+  const_cast<BaseReply &>(other).unlink();
   return *this;
 }
 
@@ -396,13 +396,13 @@ void BaseReply::clearPendingResults() {
   ReplyList::iterator cur = conn->outstandingReplies.begin();
   ReplyList::iterator const end = conn->outstandingReplies.iterator_to(*this);
   while (cur != end) {
-    BaseReply& reply = *cur;
+    BaseReply &reply = *cur;
     ++cur;
     reply.readResult();
   }
 }
 
-VoidReply::VoidReply(Connection* conn) : BaseReply(conn), storedResult(false) {}
+VoidReply::VoidReply(Connection *conn) : BaseReply(conn), storedResult(false) {}
 
 VoidReply::~VoidReply() {
   try {
@@ -414,7 +414,7 @@ VoidReply::~VoidReply() {
 bool VoidReply::result() {
   if (conn) {
     clearPendingResults();
-    Connection* const tmp = conn;
+    Connection *const tmp = conn;
     conn = NULL;
     tmp->readStatusCodeReply();
     storedResult = true;
@@ -423,7 +423,7 @@ bool VoidReply::result() {
   return storedResult;
 }
 
-BoolReply::BoolReply(Connection* conn) : BaseReply(conn), storedResult(false) {}
+BoolReply::BoolReply(Connection *conn) : BaseReply(conn), storedResult(false) {}
 
 BoolReply::~BoolReply() {
   try {
@@ -435,7 +435,7 @@ BoolReply::~BoolReply() {
 bool BoolReply::result() {
   if (conn) {
     clearPendingResults();
-    Connection* const tmp = conn;
+    Connection *const tmp = conn;
     conn = NULL;
     storedResult = tmp->readIntegerReply() > 0;
     unlink();
@@ -443,7 +443,7 @@ bool BoolReply::result() {
   return storedResult;
 }
 
-IntReply::IntReply(Connection* conn) : BaseReply(conn), storedResult(0) {}
+IntReply::IntReply(Connection *conn) : BaseReply(conn), storedResult(0) {}
 
 IntReply::~IntReply() {
   try {
@@ -455,7 +455,7 @@ IntReply::~IntReply() {
 int64_t IntReply::result() {
   if (conn) {
     clearPendingResults();
-    Connection* const tmp = conn;
+    Connection *const tmp = conn;
     conn = NULL;
     storedResult = tmp->readIntegerReply();
     unlink();
@@ -463,7 +463,7 @@ int64_t IntReply::result() {
   return storedResult;
 }
 
-StringReply::StringReply(Connection* conn) : BaseReply(conn) {}
+StringReply::StringReply(Connection *conn) : BaseReply(conn) {}
 
 StringReply::~StringReply() {
   try {
@@ -472,10 +472,10 @@ StringReply::~StringReply() {
   }
 }
 
-const boost::optional<std::string>& StringReply::result() {
+const boost::optional<std::string> &StringReply::result() {
   if (conn) {
     clearPendingResults();
-    Connection* const tmp = conn;
+    Connection *const tmp = conn;
     conn = NULL;
     tmp->readBulkReply(storedResult);
     unlink();
@@ -483,7 +483,7 @@ const boost::optional<std::string>& StringReply::result() {
   return storedResult;
 }
 
-MultiBulkEnumerator::MultiBulkEnumerator(Connection* conn)
+MultiBulkEnumerator::MultiBulkEnumerator(Connection *conn)
     : BaseReply(conn), headerDone(false), count(0) {}
 
 MultiBulkEnumerator::~MultiBulkEnumerator() {
@@ -497,7 +497,7 @@ MultiBulkEnumerator::~MultiBulkEnumerator() {
   }
 }
 
-bool MultiBulkEnumerator::nextOptional(boost::optional<std::string>& out) {
+bool MultiBulkEnumerator::nextOptional(boost::optional<std::string> &out) {
   if (!pending.empty()) {
     out = pending.front();
     pending.pop_front();
@@ -550,7 +550,7 @@ bool MultiBulkEnumerator::nextOptional(boost::optional<std::string>& out) {
   return true;
 }
 
-bool MultiBulkEnumerator::next(std::string* out) {
+bool MultiBulkEnumerator::next(std::string *out) {
   bool result;
   boost::optional<std::string> optionalOut;
   result = nextOptional(optionalOut);
@@ -564,8 +564,8 @@ bool MultiBulkEnumerator::next(std::string* out) {
   return result;
 }
 
-Connection::Connection(const std::string& host, const std::string& port,
-                       const std::string& password, bool noDelay,
+Connection::Connection(const std::string &host, const std::string &port,
+                       const std::string &password, bool noDelay,
                        size_t bufferSize)
     : connection(new ClientSocket(host.c_str(), port.c_str())),
       ioStream(new std::iostream(connection->getStreamBuf())),
@@ -580,8 +580,8 @@ Connection::Connection(const std::string& host, const std::string& port,
 }
 
 #ifndef _WIN32
-Connection::Connection(const std::string& unixDomainSocket,
-                       const std::string& password, size_t bufferSize)
+Connection::Connection(const std::string &unixDomainSocket,
+                       const std::string &password, size_t bufferSize)
     : connection(new ClientSocket(unixDomainSocket.c_str())),
       ioStream(new std::iostream(connection->getStreamBuf())),
       buffer(new Buffer(bufferSize)), transaction(NULL) {
@@ -596,7 +596,7 @@ Connection::~Connection() {
                     // connection
 }
 
-static inline std::istream& getlineRN(std::istream& is, std::string& str) {
+static inline std::istream &getlineRN(std::istream &is, std::string &str) {
   return std::getline(is, str, '\r');
 }
 
@@ -628,7 +628,7 @@ std::string Connection::readStatusCodeReply() {
   return ret;
 }
 
-void Connection::readStatusCodeReply(std::string* out) {
+void Connection::readStatusCodeReply(std::string *out) {
   readErrorReply();
 
   char code = 0;
@@ -657,7 +657,7 @@ boost::optional<std::string> Connection::readBulkReply() {
   return ret;
 }
 
-void Connection::readBulkReply(boost::optional<std::string>& out) {
+void Connection::readBulkReply(boost::optional<std::string> &out) {
   readErrorReply();
 
   char code = 0;
@@ -675,23 +675,23 @@ void Connection::readBulkReply(boost::optional<std::string>& out) {
     ioStream->get(); //'\n'
     out = std::string();
     out->resize(count, '\0');
-    ioStream->read((char*)out->c_str(), out->size());
+    ioStream->read((char *)out->c_str(), out->size());
   }
 }
 
 void Connection::quit() { EXECUTE_COMMAND_SYNC(Quit); }
 
-VoidReply Connection::authenticate(const char* password) {
+VoidReply Connection::authenticate(const char *password) {
   EXECUTE_COMMAND_SYNC1(Auth, password);
   return VoidReply(this);
 }
 
-BoolReply Connection::exists(const std::string& name) {
+BoolReply Connection::exists(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Exists, name);
   return BoolReply(this);
 }
 
-BoolReply Connection::del(const std::string& name) {
+BoolReply Connection::del(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Del, name);
   return BoolReply(this);
 }
@@ -703,7 +703,7 @@ static std::string s_set = "set";
 static std::string s_zset = "zset";
 static std::string s_hash = "hash";
 
-Type Connection::type(const std::string& name) {
+Type Connection::type(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Type, name);
   std::string t = readStatusCodeReply();
   if (t == s_none)
@@ -722,7 +722,7 @@ Type Connection::type(const std::string& name) {
   return None;
 }
 
-MultiBulkEnumerator Connection::keys(const std::string& pattern) {
+MultiBulkEnumerator Connection::keys(const std::string &pattern) {
   EXECUTE_COMMAND_SYNC1(Keys, pattern);
   return MultiBulkEnumerator(this);
 }
@@ -732,14 +732,14 @@ StringReply Connection::randomKey() {
   return StringReply(this);
 }
 
-VoidReply Connection::rename(const std::string& oldName,
-                             const std::string& newName) {
+VoidReply Connection::rename(const std::string &oldName,
+                             const std::string &newName) {
   EXECUTE_COMMAND_SYNC2(Rename, oldName, newName);
   return VoidReply(this);
 }
 
-BoolReply Connection::renameNX(const std::string& oldName,
-                               const std::string& newName) {
+BoolReply Connection::renameNX(const std::string &oldName,
+                               const std::string &newName) {
   EXECUTE_COMMAND_SYNC2(RenameNX, oldName, newName);
   return BoolReply(this);
 }
@@ -749,19 +749,19 @@ IntReply Connection::dbSize() {
   return IntReply(this);
 }
 
-BoolReply Connection::expire(const std::string& name, int seconds) {
+BoolReply Connection::expire(const std::string &name, int seconds) {
   EXECUTE_COMMAND_SYNC2(Expire, name, seconds);
   return BoolReply(this);
 }
 
-BoolReply Connection::expireAt(const std::string& name, int timestamp) {
+BoolReply Connection::expireAt(const std::string &name, int timestamp) {
   EXECUTE_COMMAND_SYNC2(ExpireAt, name, timestamp);
   return BoolReply(this);
 }
 
 // TODO: persist
 
-IntReply Connection::ttl(const std::string& name) {
+IntReply Connection::ttl(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Ttl, name);
   return IntReply(this);
 }
@@ -771,7 +771,7 @@ VoidReply Connection::select(int db) {
   return VoidReply(this);
 }
 
-BoolReply Connection::move(const std::string& name, int db) {
+BoolReply Connection::move(const std::string &name, int db) {
   EXECUTE_COMMAND_SYNC2(Move, name, db);
   return BoolReply(this);
 }
@@ -786,114 +786,114 @@ VoidReply Connection::flushAll() {
   return VoidReply(this);
 }
 
-VoidReply Connection::set(const std::string& name, const std::string& value) {
+VoidReply Connection::set(const std::string &name, const std::string &value) {
   EXECUTE_COMMAND_SYNC2(Set, name, value);
   return VoidReply(this);
 }
 
-StringReply Connection::get(const std::string& name) {
+StringReply Connection::get(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Get, name);
   return StringReply(this);
 }
 
 // TODO: mget
 
-StringReply Connection::getSet(const std::string& name,
-                               const std::string& value) {
+StringReply Connection::getSet(const std::string &name,
+                               const std::string &value) {
   EXECUTE_COMMAND_SYNC2(GetSet, name, value);
   return StringReply(this);
 }
 
-BoolReply Connection::setNX(const std::string& name, const std::string& value) {
+BoolReply Connection::setNX(const std::string &name, const std::string &value) {
   EXECUTE_COMMAND_SYNC2(SetNX, name, value);
   return BoolReply(this);
 }
 
-VoidReply Connection::setEx(const std::string& name, int time,
-                            const std::string& value) {
+VoidReply Connection::setEx(const std::string &name, int time,
+                            const std::string &value) {
   EXECUTE_COMMAND_SYNC3(SetEx, name, time, value);
   return VoidReply(this);
 }
 
-IntReply Connection::incr(const std::string& name) {
+IntReply Connection::incr(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Incr, name);
   return IntReply(this);
 }
 
-IntReply Connection::incrBy(const std::string& name, int value) {
+IntReply Connection::incrBy(const std::string &name, int value) {
   EXECUTE_COMMAND_SYNC2(IncrBy, name, value);
   return IntReply(this);
 }
 
-IntReply Connection::decr(const std::string& name) {
+IntReply Connection::decr(const std::string &name) {
   EXECUTE_COMMAND_SYNC1(Decr, name);
   return IntReply(this);
 }
 
-IntReply Connection::decrBy(const std::string& name, int value) {
+IntReply Connection::decrBy(const std::string &name, int value) {
   EXECUTE_COMMAND_SYNC2(DecrBy, name, value);
   return IntReply(this);
 }
 
-IntReply Connection::append(const std::string& name, const std::string& value) {
+IntReply Connection::append(const std::string &name, const std::string &value) {
   EXECUTE_COMMAND_SYNC2(Append, name, value);
   return IntReply(this);
 }
 
-StringReply Connection::subStr(const std::string& name, int start, int end) {
+StringReply Connection::subStr(const std::string &name, int start, int end) {
   EXECUTE_COMMAND_SYNC3(SubStr, name, start, end);
   return StringReply(this);
 }
 
-IntReply Connection::rpush(const std::string& key, const std::string& value) {
+IntReply Connection::rpush(const std::string &key, const std::string &value) {
   EXECUTE_COMMAND_SYNC2(RPush, key, value);
   return IntReply(this);
 }
 
-IntReply Connection::lpush(const std::string& key, const std::string& value) {
+IntReply Connection::lpush(const std::string &key, const std::string &value) {
   EXECUTE_COMMAND_SYNC2(LPush, key, value);
   return IntReply(this);
 }
 
-IntReply Connection::llen(const std::string& key) {
+IntReply Connection::llen(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(LLen, key);
   return IntReply(this);
 }
 
-MultiBulkEnumerator Connection::lrange(const std::string& key, int start,
+MultiBulkEnumerator Connection::lrange(const std::string &key, int start,
                                        int end) {
   EXECUTE_COMMAND_SYNC3(LRange, key, start, end);
   return MultiBulkEnumerator(this);
 }
 
-VoidReply Connection::ltrim(const std::string& key, int start, int end) {
+VoidReply Connection::ltrim(const std::string &key, int start, int end) {
   EXECUTE_COMMAND_SYNC3(LTrim, key, start, end);
   return VoidReply(this);
 }
 
-StringReply Connection::lindex(const std::string& key, int index) {
+StringReply Connection::lindex(const std::string &key, int index) {
   EXECUTE_COMMAND_SYNC2(LIndex, key, index);
   return StringReply(this);
 }
 
-VoidReply Connection::lset(const std::string& key, int index,
-                           const std::string& value) {
+VoidReply Connection::lset(const std::string &key, int index,
+                           const std::string &value) {
   EXECUTE_COMMAND_SYNC3(LSet, key, index, value);
   return VoidReply(this);
 }
 
-IntReply Connection::lrem(const std::string& key, int count,
-                          const std::string& value) {
+IntReply Connection::lrem(const std::string &key, int count,
+                          const std::string &value) {
   EXECUTE_COMMAND_SYNC3(LRem, key, count, value);
   return IntReply(this);
 }
 
-StringReply Connection::lpop(const std::string& key) {
+StringReply Connection::lpop(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(LPop, key);
   return StringReply(this);
 }
 
-StringReply Connection::rpop(const std::string& key) {
+StringReply Connection::rpop(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(RPop, key);
   return StringReply(this);
 }
@@ -908,153 +908,153 @@ MultiBulkEnumerator Connection::brpop(ArgList keys, int timeout) {
   return MultiBulkEnumerator(this);
 }
 
-StringReply Connection::rpopLpush(const std::string& src,
-                                  const std::string& dest) {
+StringReply Connection::rpopLpush(const std::string &src,
+                                  const std::string &dest) {
   EXECUTE_COMMAND_SYNC2(RPopLPush, src, dest);
   return StringReply(this);
 }
 
-BoolReply Connection::sadd(const std::string& key, const std::string& member) {
+BoolReply Connection::sadd(const std::string &key, const std::string &member) {
   EXECUTE_COMMAND_SYNC2(SAdd, key, member);
   return BoolReply(this);
 }
 
-BoolReply Connection::srem(const std::string& key, const std::string& member) {
+BoolReply Connection::srem(const std::string &key, const std::string &member) {
   EXECUTE_COMMAND_SYNC2(SRem, key, member);
   return BoolReply(this);
 }
 
-StringReply Connection::spop(const std::string& key) {
+StringReply Connection::spop(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(SPop, key);
   return StringReply(this);
 }
 
-BoolReply Connection::smove(const std::string& src, const std::string& dest,
-                            const std::string& member) {
+BoolReply Connection::smove(const std::string &src, const std::string &dest,
+                            const std::string &member) {
   EXECUTE_COMMAND_SYNC3(SMove, src, dest, member);
   return BoolReply(this);
 }
 
-IntReply Connection::scard(const std::string& key) {
+IntReply Connection::scard(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(SCard, key);
   return IntReply(this);
 }
 
-BoolReply Connection::sisMember(const std::string& key,
-                                const std::string& member) {
+BoolReply Connection::sisMember(const std::string &key,
+                                const std::string &member) {
   EXECUTE_COMMAND_SYNC2(SIsMember, key, member);
   return BoolReply(this);
 }
 
-MultiBulkEnumerator Connection::sinter(const ArgList& keys) {
+MultiBulkEnumerator Connection::sinter(const ArgList &keys) {
   EXECUTE_COMMAND_SYNC1(SInter, keys);
   return MultiBulkEnumerator(this);
 }
 
-IntReply Connection::sinterStore(const std::string& key, const ArgList& keys) {
+IntReply Connection::sinterStore(const std::string &key, const ArgList &keys) {
   EXECUTE_COMMAND_SYNC2(SInterStore, key, keys);
   return IntReply(this);
 }
 
-MultiBulkEnumerator Connection::sunion(const ArgList& keys) {
+MultiBulkEnumerator Connection::sunion(const ArgList &keys) {
   EXECUTE_COMMAND_SYNC1(SUnion, keys);
   return MultiBulkEnumerator(this);
 }
 
-IntReply Connection::sunionStore(const std::string& key, const ArgList& keys) {
+IntReply Connection::sunionStore(const std::string &key, const ArgList &keys) {
   EXECUTE_COMMAND_SYNC2(SUnionStore, key, keys);
   return IntReply(this);
 }
 
-MultiBulkEnumerator Connection::sdiff(const ArgList& keys) {
+MultiBulkEnumerator Connection::sdiff(const ArgList &keys) {
   EXECUTE_COMMAND_SYNC1(SDiff, keys);
   return MultiBulkEnumerator(this);
 }
 
-IntReply Connection::sdiffStore(const std::string& key, const ArgList& keys) {
+IntReply Connection::sdiffStore(const std::string &key, const ArgList &keys) {
   EXECUTE_COMMAND_SYNC2(SDiffStore, key, keys);
   return IntReply(this);
 }
 
-MultiBulkEnumerator Connection::smembers(const std::string& key) {
+MultiBulkEnumerator Connection::smembers(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(SMembers, key);
   return MultiBulkEnumerator(this);
 }
 
-StringReply Connection::srandMember(const std::string& key) {
+StringReply Connection::srandMember(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(SRandMember, key);
   return StringReply(this);
 }
 
 // TODO: all Z* functions
 
-BoolReply Connection::hset(const std::string& key, const std::string& field,
-                           const std::string& value) {
+BoolReply Connection::hset(const std::string &key, const std::string &field,
+                           const std::string &value) {
   EXECUTE_COMMAND_SYNC3(HSet, key, field, value);
   return BoolReply(this);
 }
 
-StringReply Connection::hget(const std::string& key, const std::string& field) {
+StringReply Connection::hget(const std::string &key, const std::string &field) {
   EXECUTE_COMMAND_SYNC2(HGet, key, field);
   return StringReply(this);
 }
 
-BoolReply Connection::hsetNX(const std::string& key, const std::string& field,
-                             const std::string& value) {
+BoolReply Connection::hsetNX(const std::string &key, const std::string &field,
+                             const std::string &value) {
   EXECUTE_COMMAND_SYNC3(HSetNX, key, field, value);
   return BoolReply(this);
 }
 
-MultiBulkEnumerator Connection::hmget(const std::string& key,
-                                      const ArgList& fields) {
+MultiBulkEnumerator Connection::hmget(const std::string &key,
+                                      const ArgList &fields) {
   EXECUTE_COMMAND_SYNC2(HMGet, key, fields);
   return MultiBulkEnumerator(this);
 }
 
-VoidReply Connection::hmset(const std::string& key,
-                            const KeyValueList& fields) {
+VoidReply Connection::hmset(const std::string &key,
+                            const KeyValueList &fields) {
   EXECUTE_COMMAND_SYNC2(HMSet, key, fields);
   return VoidReply(this);
 }
 
-IntReply Connection::hincrBy(const std::string& key, const std::string& field,
+IntReply Connection::hincrBy(const std::string &key, const std::string &field,
                              int value) {
   EXECUTE_COMMAND_SYNC3(HIncrBy, key, field, value);
   return IntReply(this);
 }
 
-BoolReply Connection::hexists(const std::string& key,
-                              const std::string& field) {
+BoolReply Connection::hexists(const std::string &key,
+                              const std::string &field) {
   EXECUTE_COMMAND_SYNC2(HExists, key, field);
   return BoolReply(this);
 }
 
-BoolReply Connection::hdel(const std::string& key, const std::string& field) {
+BoolReply Connection::hdel(const std::string &key, const std::string &field) {
   EXECUTE_COMMAND_SYNC2(HDel, key, field);
   return BoolReply(this);
 }
 
-IntReply Connection::hlen(const std::string& key) {
+IntReply Connection::hlen(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(HLen, key);
   return IntReply(this);
 }
 
-MultiBulkEnumerator Connection::hkeys(const std::string& key) {
+MultiBulkEnumerator Connection::hkeys(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(HKeys, key);
   return MultiBulkEnumerator(this);
 }
 
-MultiBulkEnumerator Connection::hvals(const std::string& key) {
+MultiBulkEnumerator Connection::hvals(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(HVals, key);
   return MultiBulkEnumerator(this);
 }
 
-MultiBulkEnumerator Connection::hgetAll(const std::string& key) {
+MultiBulkEnumerator Connection::hgetAll(const std::string &key) {
   EXECUTE_COMMAND_SYNC1(HGetAll, key);
   return MultiBulkEnumerator(this);
 }
 
-MultiBulkEnumerator Connection::scriptExists(const ArgList& scripts) {
+MultiBulkEnumerator Connection::scriptExists(const ArgList &scripts) {
   EXECUTE_COMMAND_SYNC2(Script, std::string("exists"), scripts);
   return MultiBulkEnumerator(this);
 }
@@ -1069,20 +1069,20 @@ VoidReply Connection::scriptKill() {
   return VoidReply(this);
 }
 
-StringReply Connection::scriptLoad(const std::string& script) {
+StringReply Connection::scriptLoad(const std::string &script) {
   EXECUTE_COMMAND_SYNC2(Script, std::string("load"), script);
   return StringReply(this);
 }
 
-MultiBulkEnumerator Connection::eval(const std::string& script,
-                                     const ArgList& keys, const ArgList& args) {
+MultiBulkEnumerator Connection::eval(const std::string &script,
+                                     const ArgList &keys, const ArgList &args) {
   EXECUTE_COMMAND_SYNC3(Eval, script, keys, args);
   return MultiBulkEnumerator(this);
 }
 
-MultiBulkEnumerator Connection::evalSha(const std::string& sha,
-                                        const ArgList& keys,
-                                        const ArgList& args) {
+MultiBulkEnumerator Connection::evalSha(const std::string &sha,
+                                        const ArgList &keys,
+                                        const ArgList &args) {
   EXECUTE_COMMAND_SYNC3(EvalSha, sha, keys, args);
   return MultiBulkEnumerator(this);
 }
@@ -1114,24 +1114,24 @@ StringReply Connection::info() {
   return StringReply(this);
 }
 
-void Connection::subscribe(const std::string& channel) {
+void Connection::subscribe(const std::string &channel) {
   EXECUTE_COMMAND_SYNC1(Subscribe, channel);
 }
 
-void Connection::unsubscribe(const std::string& channel) {
+void Connection::unsubscribe(const std::string &channel) {
   EXECUTE_COMMAND_SYNC1(Unsubscribe, channel);
 }
 
-void Connection::psubscribe(const std::string& channel) {
+void Connection::psubscribe(const std::string &channel) {
   EXECUTE_COMMAND_SYNC1(PSubscribe, channel);
 }
 
-void Connection::punsubscribe(const std::string& channel) {
+void Connection::punsubscribe(const std::string &channel) {
   EXECUTE_COMMAND_SYNC1(PUnsubscribe, channel);
 }
 
-IntReply Connection::publish(const std::string& channel,
-                             const std::string& message) {
+IntReply Connection::publish(const std::string &channel,
+                             const std::string &message) {
   EXECUTE_COMMAND_SYNC2(Publish, channel, message);
   return IntReply(this);
 }
@@ -1142,7 +1142,7 @@ void Connection::exec() { EXECUTE_COMMAND_SYNC(Exec); }
 
 void Connection::discard() { EXECUTE_COMMAND_SYNC(Discard); }
 
-Transaction::Transaction(Connection* conn) : conn(conn), replies(conn) {
+Transaction::Transaction(Connection *conn) : conn(conn), replies(conn) {
   if (conn->transaction)
     throw std::runtime_error(
         "cannot start a transaction while the connection is already in one");
@@ -1181,7 +1181,7 @@ void QueuedReply::readResult() {
   if (!conn)
     return;
 
-  Connection* const tmp = conn;
+  Connection *const tmp = conn;
   conn = NULL;
   tmp->readStatusCodeReply(); // one +OK for the MULTI
   // one +QUEUED per queued request (including this QueuedReply)

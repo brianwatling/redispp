@@ -10,9 +10,9 @@ void sleep(size_t seconds) { Sleep(seconds * 1000); }
 
 using namespace redispp;
 
-const char* TEST_PORT = "6379";
-const char* TEST_HOST = "127.0.0.1";
-const char* TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
+const char *TEST_PORT = "6379";
+const char *TEST_HOST = "127.0.0.1";
+const char *TEST_UNIX_DOMAIN_SOCKET = "/tmp/redis.sock";
 
 bool init_unit_test() {
 #ifdef _WIN32

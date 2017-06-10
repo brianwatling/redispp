@@ -28,8 +28,5 @@ multitest: multi.o libredispp.a
 transtest: trans.o libredispp.a
 	g++ $^ libredispp.a -o $@
 
-clang-format:
-	for f in src/*.cpp src/*.h test/*.cpp; do clang-format $$f | sponge $$f; done
-
 clean:
 	rm -f *.o libredispp.a libredispp.so perftest unittests multitest transtest
