@@ -24,7 +24,7 @@ typedef std::list<std::string> ArgList;
 typedef std::list<KeyValuePair> KeyValueList;
 
 template <typename BufferType> struct Command {
-  Command(const char *name) : cmdName(std::string(name)), numArgs(0) {}
+  Command(const char* name) : cmdName(std::string(name)), numArgs(0) {}
 
   virtual ~Command() {}
 
@@ -43,16 +43,16 @@ template <typename BufferType> struct Command {
     return header;
   }
 
-  void execute(BufferType const &dest) { dest->write(header()); }
+  void execute(BufferType const& dest) { dest->write(header()); }
 
-  template <typename T> void execute(T const &arg1, BufferType const &dest) {
+  template <typename T> void execute(T const& arg1, BufferType const& dest) {
     numArgs = 1;
     dest->write(header());
     dest->writeArg(arg1);
   }
 
   template <typename T1, typename T2>
-  void execute(T1 const &arg1, T2 const &arg2, BufferType const &dest) {
+  void execute(T1 const& arg1, T2 const& arg2, BufferType const& dest) {
     numArgs = 2;
     dest->write(header());
     dest->writeArg(arg1);
@@ -60,8 +60,8 @@ template <typename BufferType> struct Command {
   }
 
   template <typename T1, typename T2, typename T3>
-  void execute(T1 const &arg1, T2 const &arg2, T3 const &arg3,
-               BufferType const &dest) {
+  void execute(T1 const& arg1, T2 const& arg2, T3 const& arg3,
+               BufferType const& dest) {
     numArgs = 3;
     dest->write(header());
     dest->writeArg(arg1);
@@ -69,15 +69,15 @@ template <typename BufferType> struct Command {
     dest->writeArg(arg3);
   }
 
-  void execute(const ArgList &args, const BufferType &dest) {
+  void execute(const ArgList& args, const BufferType& dest) {
     numArgs = args.size();
     dest->write(header());
 
     BOOST_FOREACH (std::string arg, args) { dest->writeArg(arg); }
   }
 
-  void execute(const std::string &arg1, const ArgList &args,
-               const BufferType &dest) {
+  void execute(const std::string& arg1, const ArgList& args,
+               const BufferType& dest) {
     numArgs = args.size() + 1;
     dest->write(header());
     dest->writeArg(arg1);
@@ -85,8 +85,8 @@ template <typename BufferType> struct Command {
     BOOST_FOREACH (std::string arg, args) { dest->writeArg(arg); }
   }
 
-  void execute(const std::string &arg1, const KeyValueList &args,
-               const BufferType &dest) {
+  void execute(const std::string& arg1, const KeyValueList& args,
+               const BufferType& dest) {
     numArgs = args.size() * 2 + 1;
     dest->write(header());
     dest->writeArg(arg1);
@@ -97,7 +97,7 @@ template <typename BufferType> struct Command {
     }
   }
 
-  void execute(const ArgList &args, const int argn, const BufferType &dest) {
+  void execute(const ArgList& args, const int argn, const BufferType& dest) {
     numArgs = args.size() + 1;
     dest->write(header());
 
@@ -105,8 +105,8 @@ template <typename BufferType> struct Command {
     dest->writeArg(argn);
   }
 
-  void execute(const std::string &arg1, const ArgList &argList1,
-               const ArgList &argList2, const BufferType &dest) {
+  void execute(const std::string& arg1, const ArgList& argList1,
+               const ArgList& argList2, const BufferType& dest) {
     numArgs = argList1.size() + argList2.size() + 2;
     dest->write(header());
     dest->writeArg(arg1);
@@ -122,8 +122,8 @@ template <typename BufferType> struct Command {
 };
 
 #define DEFINE_COMMAND(name, args)                                             \
-  struct name##Command : public Command<std::unique_ptr<Buffer>> {               \
-    name##Command() : Command<std::unique_ptr<Buffer>>(#name) {}                 \
+  struct name##Command : public Command<std::auto_ptr<Buffer>> {               \
+    name##Command() : Command<std::auto_ptr<Buffer>>(#name) {}                 \
   };                                                                           \
   name##Command _##name##Command;
 
@@ -150,9 +150,9 @@ class BaseReply : public auto_unlink_hook {
 public:
   BaseReply() : conn(NULL) {}
 
-  BaseReply(const BaseReply &other);
+  BaseReply(const BaseReply& other);
 
-  BaseReply &operator=(const BaseReply &other);
+  BaseReply& operator=(const BaseReply& other);
 
   virtual ~BaseReply() {}
 
@@ -161,9 +161,9 @@ protected:
 
   void clearPendingResults();
 
-  BaseReply(Connection *conn);
+  BaseReply(Connection* conn);
 
-  mutable Connection *conn;
+  mutable Connection* conn;
 };
 
 typedef boost::intrusive::list<BaseReply,
@@ -193,7 +193,7 @@ protected:
   virtual void readResult();
 
 private:
-  QueuedReply(Connection *conn) : BaseReply(conn), count(0), state(Blank) {}
+  QueuedReply(Connection* conn) : BaseReply(conn), count(0), state(Blank) {}
 
   size_t count;
   TransactionState state;
@@ -207,10 +207,10 @@ public:
 
   ~VoidReply();
 
-  VoidReply(const VoidReply &other)
+  VoidReply(const VoidReply& other)
       : BaseReply(other), storedResult(other.storedResult) {}
 
-  VoidReply &operator=(const VoidReply &other) {
+  VoidReply& operator=(const VoidReply& other) {
     result();
     BaseReply::operator=(other);
     storedResult = other.storedResult;
@@ -225,7 +225,7 @@ protected:
   virtual void readResult() { result(); }
 
 private:
-  VoidReply(Connection *conn);
+  VoidReply(Connection* conn);
 
   bool storedResult;
 };
@@ -238,10 +238,10 @@ public:
 
   ~BoolReply();
 
-  BoolReply(const BoolReply &other)
+  BoolReply(const BoolReply& other)
       : BaseReply(other), storedResult(other.storedResult) {}
 
-  BoolReply &operator=(const BoolReply &other) {
+  BoolReply& operator=(const BoolReply& other) {
     result();
     BaseReply::operator=(other);
     storedResult = other.storedResult;
@@ -256,7 +256,7 @@ protected:
   virtual void readResult() { result(); }
 
 private:
-  BoolReply(Connection *conn);
+  BoolReply(Connection* conn);
 
   bool storedResult;
 };
@@ -269,10 +269,10 @@ public:
 
   ~IntReply();
 
-  IntReply(const IntReply &other)
+  IntReply(const IntReply& other)
       : BaseReply(other), storedResult(other.storedResult) {}
 
-  IntReply &operator=(const IntReply &other) {
+  IntReply& operator=(const IntReply& other) {
     result();
     BaseReply::operator=(other);
     storedResult = other.storedResult;
@@ -287,7 +287,7 @@ protected:
   virtual void readResult() { result(); }
 
 private:
-  IntReply(Connection *conn);
+  IntReply(Connection* conn);
 
   int64_t storedResult;
 };
@@ -300,17 +300,17 @@ public:
 
   ~StringReply();
 
-  StringReply(const StringReply &other)
+  StringReply(const StringReply& other)
       : BaseReply(other), storedResult(other.storedResult) {}
 
-  StringReply &operator=(const StringReply &other) {
+  StringReply& operator=(const StringReply& other) {
     result();
     BaseReply::operator=(other);
     storedResult = other.storedResult;
     return *this;
   }
 
-  const boost::optional<std::string> &result();
+  const boost::optional<std::string>& result();
 
   operator std::string() {
     result();
@@ -324,7 +324,7 @@ protected:
   virtual void readResult() { result(); }
 
 private:
-  StringReply(Connection *conn);
+  StringReply(Connection* conn);
 
   boost::optional<std::string> storedResult;
 };
@@ -337,12 +337,12 @@ public:
 
   ~MultiBulkEnumerator();
 
-  MultiBulkEnumerator(const MultiBulkEnumerator &other)
+  MultiBulkEnumerator(const MultiBulkEnumerator& other)
       : BaseReply(other), headerDone(other.headerDone), count(other.count) {
     pending.splice(pending.begin(), other.pending);
   }
 
-  MultiBulkEnumerator &operator=(const MultiBulkEnumerator &other) {
+  MultiBulkEnumerator& operator=(const MultiBulkEnumerator& other) {
     if (conn && count > 0) {
       // assume unread data can be discarded, this is the only object that
       // could/would have read it
@@ -357,8 +357,8 @@ public:
     return *this;
   }
 
-  bool nextOptional(boost::optional<std::string> &out);
-  bool next(std::string *out);
+  bool nextOptional(boost::optional<std::string>& out);
+  bool next(std::string* out);
 
 protected:
   virtual void readResult() {
@@ -372,7 +372,7 @@ protected:
     }
   }
 
-  MultiBulkEnumerator(Connection *conn);
+  MultiBulkEnumerator(Connection* conn);
 
   bool headerDone;
   int count;
@@ -385,7 +385,7 @@ class Transaction : boost::noncopyable {
   friend class BaseReply;
 
 public:
-  Transaction(Connection *conn);
+  Transaction(Connection* conn);
 
   ~Transaction();
 
@@ -394,7 +394,7 @@ public:
   void abort();
 
 private:
-  Connection *conn;
+  Connection* conn;
   QueuedReply replies;
 };
 
@@ -411,11 +411,11 @@ class Connection {
 public:
   static const size_t kDefaultBufferSize = 4 * 1024;
 
-  Connection(const std::string &host, const std::string &port,
-             const std::string &password, bool noDelay = false,
+  Connection(const std::string& host, const std::string& port,
+             const std::string& password, bool noDelay = false,
              size_t bufferSize = kDefaultBufferSize);
 #ifndef _WIN32
-  Connection(const std::string &unixDomainSocket, const std::string &password,
+  Connection(const std::string& unixDomainSocket, const std::string& password,
              size_t bufferSize = kDefaultBufferSize);
 #endif
 
@@ -423,109 +423,109 @@ public:
 
   void quit();
 
-  VoidReply authenticate(const char *password);
+  VoidReply authenticate(const char* password);
 
-  BoolReply exists(const std::string &name);
-  BoolReply del(const std::string &name);
+  BoolReply exists(const std::string& name);
+  BoolReply del(const std::string& name);
 
-  Type type(const std::string &name);
+  Type type(const std::string& name);
 
-  MultiBulkEnumerator keys(const std::string &pattern);
+  MultiBulkEnumerator keys(const std::string& pattern);
   StringReply randomKey();
 
-  VoidReply rename(const std::string &oldName, const std::string &newName);
-  BoolReply renameNX(const std::string &oldName, const std::string &newName);
+  VoidReply rename(const std::string& oldName, const std::string& newName);
+  BoolReply renameNX(const std::string& oldName, const std::string& newName);
 
   IntReply dbSize();
 
-  BoolReply expire(const std::string &name, int seconds);
-  BoolReply expireAt(const std::string &name, int timestamp);
+  BoolReply expire(const std::string& name, int seconds);
+  BoolReply expireAt(const std::string& name, int timestamp);
   // TODO: persist
-  IntReply ttl(const std::string &name);
+  IntReply ttl(const std::string& name);
 
   VoidReply select(int db);
-  BoolReply move(const std::string &name, int db);
+  BoolReply move(const std::string& name, int db);
 
   VoidReply flushDb();
   VoidReply flushAll();
 
-  VoidReply set(const std::string &name, const std::string &value);
-  StringReply get(const std::string &name);
+  VoidReply set(const std::string& name, const std::string& value);
+  StringReply get(const std::string& name);
   // TODO: mget
-  StringReply getSet(const std::string &name, const std::string &value);
-  BoolReply setNX(const std::string &name, const std::string &value);
-  VoidReply setEx(const std::string &name, int time, const std::string &value);
+  StringReply getSet(const std::string& name, const std::string& value);
+  BoolReply setNX(const std::string& name, const std::string& value);
+  VoidReply setEx(const std::string& name, int time, const std::string& value);
 
   // TODO: mset
   // TODO: msetnx
 
-  IntReply incr(const std::string &name);
-  IntReply incrBy(const std::string &name, int value);
+  IntReply incr(const std::string& name);
+  IntReply incrBy(const std::string& name, int value);
 
-  IntReply decr(const std::string &name);
-  IntReply decrBy(const std::string &name, int value);
+  IntReply decr(const std::string& name);
+  IntReply decrBy(const std::string& name, int value);
 
-  IntReply append(const std::string &name, const std::string &value);
-  StringReply subStr(const std::string &name, int start, int end);
+  IntReply append(const std::string& name, const std::string& value);
+  StringReply subStr(const std::string& name, int start, int end);
 
-  IntReply rpush(const std::string &key, const std::string &value);
-  IntReply lpush(const std::string &key, const std::string &value);
-  IntReply llen(const std::string &key);
-  MultiBulkEnumerator lrange(const std::string &key, int start, int end);
-  VoidReply ltrim(const std::string &key, int start, int end);
-  StringReply lindex(const std::string &key, int index);
-  VoidReply lset(const std::string &key, int index, const std::string &value);
-  IntReply lrem(const std::string &key, int count, const std::string &value);
-  StringReply lpop(const std::string &key);
-  StringReply rpop(const std::string &key);
+  IntReply rpush(const std::string& key, const std::string& value);
+  IntReply lpush(const std::string& key, const std::string& value);
+  IntReply llen(const std::string& key);
+  MultiBulkEnumerator lrange(const std::string& key, int start, int end);
+  VoidReply ltrim(const std::string& key, int start, int end);
+  StringReply lindex(const std::string& key, int index);
+  VoidReply lset(const std::string& key, int index, const std::string& value);
+  IntReply lrem(const std::string& key, int count, const std::string& value);
+  StringReply lpop(const std::string& key);
+  StringReply rpop(const std::string& key);
   MultiBulkEnumerator blpop(ArgList keys, int timeout);
   MultiBulkEnumerator brpop(ArgList keys, int timeout);
-  StringReply rpopLpush(const std::string &src, const std::string &dest);
+  StringReply rpopLpush(const std::string& src, const std::string& dest);
 
-  BoolReply sadd(const std::string &key, const std::string &member);
-  BoolReply srem(const std::string &key, const std::string &member);
-  StringReply spop(const std::string &key);
-  BoolReply smove(const std::string &src, const std::string &dest,
-                  const std::string &member);
-  IntReply scard(const std::string &key);
-  BoolReply sisMember(const std::string &key, const std::string &member);
-  MultiBulkEnumerator sinter(const ArgList &keys);
-  IntReply sinterStore(const std::string &key, const ArgList &keys);
-  MultiBulkEnumerator sunion(const ArgList &keys);
-  IntReply sunionStore(const std::string &key, const ArgList &keys);
-  MultiBulkEnumerator sdiff(const ArgList &keys);
-  IntReply sdiffStore(const std::string &key, const ArgList &keys);
-  MultiBulkEnumerator smembers(const std::string &key);
-  StringReply srandMember(const std::string &key);
+  BoolReply sadd(const std::string& key, const std::string& member);
+  BoolReply srem(const std::string& key, const std::string& member);
+  StringReply spop(const std::string& key);
+  BoolReply smove(const std::string& src, const std::string& dest,
+                  const std::string& member);
+  IntReply scard(const std::string& key);
+  BoolReply sisMember(const std::string& key, const std::string& member);
+  MultiBulkEnumerator sinter(const ArgList& keys);
+  IntReply sinterStore(const std::string& key, const ArgList& keys);
+  MultiBulkEnumerator sunion(const ArgList& keys);
+  IntReply sunionStore(const std::string& key, const ArgList& keys);
+  MultiBulkEnumerator sdiff(const ArgList& keys);
+  IntReply sdiffStore(const std::string& key, const ArgList& keys);
+  MultiBulkEnumerator smembers(const std::string& key);
+  StringReply srandMember(const std::string& key);
 
   // TODO: all Z* functions
 
-  BoolReply hset(const std::string &key, const std::string &field,
-                 const std::string &value);
-  StringReply hget(const std::string &key, const std::string &field);
-  BoolReply hsetNX(const std::string &key, const std::string &field,
-                   const std::string &value);
-  MultiBulkEnumerator hmget(const std::string &key,
-                            const std::list<std::string> &fields);
-  VoidReply hmset(const std::string &key,
-                  const std::list<std::pair<std::string, std::string>> &fields);
-  IntReply hincrBy(const std::string &key, const std::string &field, int value);
-  BoolReply hexists(const std::string &key, const std::string &field);
-  BoolReply hdel(const std::string &key, const std::string &field);
-  IntReply hlen(const std::string &key);
-  MultiBulkEnumerator hkeys(const std::string &key);
-  MultiBulkEnumerator hvals(const std::string &key);
-  MultiBulkEnumerator hgetAll(const std::string &key);
+  BoolReply hset(const std::string& key, const std::string& field,
+                 const std::string& value);
+  StringReply hget(const std::string& key, const std::string& field);
+  BoolReply hsetNX(const std::string& key, const std::string& field,
+                   const std::string& value);
+  MultiBulkEnumerator hmget(const std::string& key,
+                            const std::list<std::string>& fields);
+  VoidReply hmset(const std::string& key,
+                  const std::list<std::pair<std::string, std::string>>& fields);
+  IntReply hincrBy(const std::string& key, const std::string& field, int value);
+  BoolReply hexists(const std::string& key, const std::string& field);
+  BoolReply hdel(const std::string& key, const std::string& field);
+  IntReply hlen(const std::string& key);
+  MultiBulkEnumerator hkeys(const std::string& key);
+  MultiBulkEnumerator hvals(const std::string& key);
+  MultiBulkEnumerator hgetAll(const std::string& key);
 
-  MultiBulkEnumerator scriptExists(const ArgList &script);
+  MultiBulkEnumerator scriptExists(const ArgList& script);
   VoidReply scriptFlush();
   VoidReply scriptKill();
-  StringReply scriptLoad(const std::string &script);
+  StringReply scriptLoad(const std::string& script);
 
-  MultiBulkEnumerator eval(const std::string &script, const ArgList &keys,
-                           const ArgList &args);
-  MultiBulkEnumerator evalSha(const std::string &sha, const ArgList &keys,
-                              const ArgList &args);
+  MultiBulkEnumerator eval(const std::string& script, const ArgList& keys,
+                           const ArgList& args);
+  MultiBulkEnumerator evalSha(const std::string& sha, const ArgList& keys,
+                              const ArgList& args);
 
   VoidReply save();
   VoidReply bgSave();
@@ -534,26 +534,26 @@ public:
   void shutdown();
   StringReply info();
 
-  void subscribe(const std::string &channel);
-  void unsubscribe(const std::string &channel);
-  void psubscribe(const std::string &channel);
-  void punsubscribe(const std::string &channel);
-  IntReply publish(const std::string &channel, const std::string &message);
+  void subscribe(const std::string& channel);
+  void unsubscribe(const std::string& channel);
+  void psubscribe(const std::string& channel);
+  void punsubscribe(const std::string& channel);
+  IntReply publish(const std::string& channel, const std::string& message);
 
 private:
   char statusCode();
   void readErrorReply();
-  void readStatusCodeReply(std::string *out);
+  void readStatusCodeReply(std::string* out);
   std::string readStatusCodeReply();
   int64_t readIntegerReply();
-  void readBulkReply(boost::optional<std::string> &out);
+  void readBulkReply(boost::optional<std::string>& out);
   boost::optional<std::string> readBulkReply();
 
-  std::unique_ptr<ClientSocket> connection;
-  std::unique_ptr<std::iostream> ioStream;
-  std::unique_ptr<Buffer> buffer;
+  std::auto_ptr<ClientSocket> connection;
+  std::auto_ptr<std::iostream> ioStream;
+  std::auto_ptr<Buffer> buffer;
   ReplyList outstandingReplies;
-  Transaction *transaction;
+  Transaction* transaction;
 
   DEFINE_COMMAND(Quit, 0);
   DEFINE_COMMAND(Auth, 1);
