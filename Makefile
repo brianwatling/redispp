@@ -1,32 +1,33 @@
 all: libredispp.a libredispp.so unittests perftest multitest transtest
 
+CXX ?= g++
 CXXFLAGS ?= -std=c++11 -g -O0 -Isrc $(EXTRA_CXXFLAGS) -Werror
 
 VPATH += src test
 
 %.o: %.cpp
-	g++ $(CXXFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 libredispp.a: redispp.o
 	ar cr libredispp.a redispp.o
 
 %.pic.o: %.cpp
-	g++ -fPIC $(CXXFLAGS) -c $^ -o $@
+	$(CXX) -fPIC $(CXXFLAGS) -c $^ -o $@
 
 libredispp.so: redispp.pic.o
-	g++ -shared $^ -o $@
+	$(CXX) -shared $^ -o $@
 
 unittests: test.o libredispp.a
-	g++ $^ libredispp.a -o $@
+	$(CXX) $^ libredispp.a -o $@
 
 perftest: perf.o libredispp.a
-	g++ $^ libredispp.a -o $@
+	$(CXX) $^ libredispp.a -o $@
 
 multitest: multi.o libredispp.a
-	g++ $^ libredispp.a -o $@
+	$(CXX) $^ libredispp.a -o $@
 
 transtest: trans.o libredispp.a
-	g++ $^ libredispp.a -o $@
+	$(CXX) $^ libredispp.a -o $@
 
 clang-format:
 	for f in src/*.cpp src/*.h test/*.cpp; do clang-format $$f | sponge $$f; done

@@ -8,23 +8,19 @@ services:
 before_install:
   - docker pull redis
   - docker run -p 127.0.0.1:6379:6379 -d redis
-  - eval "${MATRIX_EVAL}"
-matrix:
-  include:
-    - compiler:
-      - g++
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-6
-            - libboost-test1.55-dev
-      env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
-    - compiler:
-      - clang
-      addons:
-        apt:
-          packages:
-            - libboost-test1.55-dev
+compiler:
+  - clang
+  - gcc
+install:
+  - if [ "$CXX" = "clang++" ]; then export CC="clang-4.0" CXX="clang++-4.0"; fi
+  - if [ "$CXX" = "g++" ]; then export CC="gcc-6" CXX="g++-6"; fi
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-4.0
+    packages:
+      - g++-6
+      - libboost-test1.55-dev
+      - clang-4.0
+      - libboost-test1.55-dev 
