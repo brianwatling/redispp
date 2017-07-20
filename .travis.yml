@@ -27,4 +27,9 @@ matrix:
       addons:
         apt:
           packages:
-            - libboost-test1.55-dev
+            - clang-4.0
+            - libboost-test1.55-dev 
+          sources:
+            - llvm-toolchain-trusty-4.0
+      env:
+        - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
