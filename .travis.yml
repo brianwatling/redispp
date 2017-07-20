@@ -12,7 +12,7 @@ compiler:
   - clang
   - gcc
 install:
-  - if [ "$CXX" = "clang++" ]; then export CC="clang-4" CXX="clang++-4"; fi
+  - if [ "$CXX" = "clang++" ]; then export CC="clang-4.0" CXX="clang++-4.0"; fi
   - if [ "$CXX" = "g++" ]; then export CC="gcc-6" CXX="g++-6"; fi
 addons:
   apt:
