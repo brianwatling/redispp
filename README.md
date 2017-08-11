@@ -43,8 +43,10 @@ In comparison, with a single client and no pipelining this machine could handle 
 
 ## Simple example
 
-    redispp::Connection conn("127.0.0.1", "6379", "password", false);
-    conn.set("hello", "world");
+```cpp
+redispp::Connection conn("127.0.0.1", "6379", "password", false);
+conn.set("hello", "world");
+```
 
 ## Pipelining Example
 
@@ -55,45 +57,55 @@ In comparison, with a single client and no pipelining this machine could handle 
 
 Up to 64 requests 'on the wire':
 
-    VoidReply replies[64];
+```cpp
+VoidReply replies[64];
 
-    for(size_t i = 0; i < count; ++i)
-    {
-        replies[i & 63] = conn.set(keys[i], values[i]);
-    }
+for(size_t i = 0; i < count; ++i)
+{
+    replies[i & 63] = conn.set(keys[i], values[i]);
+}
+```
 
 Save an object using pipelining. ~BoolReply takes care of reading the responses in order.
 
-    {
-        BoolReply a = conn.hset("computer", "os", "linux");
-        BoolReply b = conn.hset("computer", "speed", "3Ghz");
-        BoolReply c = conn.hset("computer", "RAM", "8GB");
-        BoolReply d = conn.hset("computer", "cores", "4");
-    }
-    //here all the replies have been cleared off conn's socket
+```cpp
+{
+    BoolReply a = conn.hset("computer", "os", "linux");
+    BoolReply b = conn.hset("computer", "speed", "3Ghz");
+    BoolReply c = conn.hset("computer", "RAM", "8GB");
+    BoolReply d = conn.hset("computer", "cores", "4");
+}
+//here all the replies have been cleared off conn's socket
+```
 
 Start loading a value, then use it later:
 
-    StringReply value = conn.get("world");
-    ...//do stuff
-    std::string theValue = value;
+```cpp
+StringReply value = conn.get("world");
+//do stuff
+std::string theValue = value;
+```
 
 These are resolved immediately:
 
-    int hlen = conn.hlen("computer");
-    std::string value = conn.get("world");
+```cpp
+int hlen = conn.hlen("computer");
+std::string value = conn.get("world");
+```
 
 This demonstrates arbitrary nesting/scoping and works as expected (see test/test.cpp). There's no problems caused by a and readA outliving b and c:
 
+```cpp
+{
+    VoidReply a = conn.set("one", "a");
+    StringReply readA = conn.get("one");
     {
-        VoidReply a = conn.set("one", "a");
-        StringReply readA = conn.get("one");
-        {
-            BoolReply b = conn.hset("two", "two", "b");
-            VoidReply c = conn.set("three", "c");
-        }
-        BOOST_CHECK(readA.result() == "a");
+        BoolReply b = conn.hset("two", "two", "b");
+        VoidReply c = conn.set("three", "c");
     }
+    BOOST_CHECK(readA.result() == "a");
+}
+```
 
 ## Multi Bulk Replies
 
@@ -101,24 +113,28 @@ Request that have multi-bulk replies supply a MultiBulkEnumerator as the return 
 
 Read out a list:
 
-    conn.lpush("hello", "a")
-    conn.lpush("hello", "b")
-    conn.lpush("hello", "c")
-    MultiBulkEnumerator result = conn.lrange("hello", 1, 3);
-    std::string result;
-    while(result.next(&result))
-        std::cout << result << std::endl;
+```cpp
+conn.lpush("hello", "a")
+conn.lpush("hello", "b")
+conn.lpush("hello", "c")
+MultiBulkEnumerator result = conn.lrange("hello", 1, 3);
+std::string result;
+while(result.next(&result))
+    std::cout << result << std::endl;
+```
 
 ## Transactions
 
 The client has basic support for transactions. It currently can open a MULTI and close it with an EXEC. Closing with a DISCARD is not supported yet. WATCH and UNWATCH may also come soon. Here's an example of how to use transactions. Note: it's very important to use the defered reply objects with transactions, or else the connection will be corrupted. (see trans.cpp for more detail).
 
-    Transaction trans(&conn);
-    VoidReply one = conn.set("x", "1");
-    VoidReply two = conn.set("y", "21");
-    StringReply three = conn.get("x");
-    trans.commit();
-    //access one, two, and three here
+```cpp
+Transaction trans(&conn);
+VoidReply one = conn.set("x", "1");
+VoidReply two = conn.set("y", "21");
+StringReply three = conn.get("x");
+trans.commit();
+//access one, two, and three here
+```
 
 ## Building
 
